@@ -54,14 +54,29 @@ spec:
             value: ocp-demo
             action: upsert
 
+      attributes:
+        actions:
+          - key: processed_by
+            value: rhbo-attributes-processor
+            action: upsert
+          - key: severity
+            action: delete
+          - key: timestamp
+            action: delete
+
       transform:
         error_mode: ignore
         log_statements:
           - context: log
             statements:
               - truncate_all(attributes, 500)
-              - set(attributes["processed_by"], "rhbo-transform-processor")
               - set(severity_text, ConvertCase(severity_text, "upper"))
+              # ── PII redaction via OTTL ──
+              - replace_pattern(body, "\\b[3-6]\\d{3}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b", "****")
+              - replace_pattern(body, "\\b\\d{3}-\\d{2}-\\d{4}\\b", "****")
+              - replace_pattern(body, "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b", "****")
+              - replace_pattern(body, "\\bsk-[A-Za-z0-9]{10,}\\b", "****")
+              - replace_pattern(body, "\\beyJ[A-Za-z0-9_-]+\\.[\\w-]+\\b", "****")
 
       filter:
         error_mode: ignore
@@ -69,16 +84,6 @@ spec:
           log_record:
             - 'severity_number < 9'
             - 'IsMatch(body, "(?i)(health|healthz|ready|readiness|liveness)")'
-
-      redaction:
-        allow_all_keys: true
-        blocked_values:
-          - '\b[3-6]\d{3}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b'
-          - '\b\d{3}-\d{2}-\d{4}\b'
-          - '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-          - '\bsk-[A-Za-z0-9]{10,}\b'
-          - '\beyJ[A-Za-z0-9_-]+\.[\w-]+\b'
-        summary: debug
 
     exporters:
       debug:
@@ -91,11 +96,11 @@ spec:
       pipelines:
         logs/filelog:
           receivers: [filelog]
-          processors: [resource, transform, filter, redaction]
+          processors: [resource, attributes, transform, filter]
           exporters: [debug]
         logs/otlpjson:
           receivers: [otlpjsonfile]
-          processors: [resource, transform, filter, redaction]
+          processors: [resource, attributes, transform, filter]
           exporters: [debug]
 
   volumeMounts:

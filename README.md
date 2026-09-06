@@ -17,15 +17,15 @@ A minimal, self-contained demo showcasing **Red Hat Build of OpenTelemetry (RHBO
 The processors run in this order on every pipeline:
 
 ```
-receiver → resourceprocessor → transformprocessor → filterprocessor → redactionprocessor → debug exporter
+receiver → resourceprocessor → attributesprocessor → transformprocessor → filterprocessor → debug exporter
 ```
 
 | # | Processor | Demo behaviour | Why it matters |
 |---|---|---|---|
 | 1 | **resourceprocessor** | Adds `deployment.environment=staging`, `team.name=platform-engineering`, `k8s.cluster.name=ocp-demo` | Consistent metadata across all signals without app changes |
-| 2 | **transformprocessor** | Uppercases severity text, truncates long attributes, stamps `processed_by=rhbo-transform-processor` | Reshape telemetry in-flight using OTTL — no code changes needed |
-| 3 | **filterprocessor** | Drops `DEBUG`-level logs and health-check probes (`/healthz`, `/ready`) | Reduce noise and storage costs |
-| 4 | **redactionprocessor** | Scrubs credit cards, SSNs, emails, API keys, JWTs from log bodies | Compliance-ready telemetry — PII never reaches your backend |
+| 2 | **attributesprocessor** | Stamps `processed_by=rhbo-attributes-processor`, deletes temporary parsing attributes | Manipulate log-record attributes — insert, update, delete, hash |
+| 3 | **transformprocessor** | Uppercases severity text, truncates long attributes, **redacts PII** (credit cards, SSNs, emails, API keys, JWTs) via OTTL `replace_pattern` | Reshape and sanitise telemetry in-flight using OTTL — no code changes needed |
+| 4 | **filterprocessor** | Drops `DEBUG`-level logs and health-check probes (`/healthz`, `/ready`) | Reduce noise and storage costs |
 
 ---
 
@@ -98,9 +98,9 @@ oc logs -f daemonset/rhbo-journald-collector -n rhbo-demo
 You will see:
 
 1. **Resource attributes added** — every log has `deployment.environment`, `team.name`, `k8s.cluster.name`
-2. **Transform markers** — `processed_by: rhbo-transform-processor`, severity in uppercase
-3. **Filtered logs** — no DEBUG-level or health-check logs appear
-4. **Redacted values** — credit cards, SSNs, emails replaced with `****`
+2. **Attributes cleaned** — `processed_by: rhbo-attributes-processor` added, temporary parse attributes removed
+3. **Transform + PII redaction** — severity uppercased, credit cards/SSNs/emails/API keys replaced with `****`
+4. **Filtered logs** — no DEBUG-level or health-check logs appear
 
 ### Teardown
 
@@ -191,14 +191,14 @@ You will see:
 **1. Resource Processor**
 > "First, the resource processor enriches every single log with deployment metadata — environment, team ownership, cluster name. This happens automatically at the collector level; no application instrumentation changes needed."
 
-**2. Transform Processor**
-> "Next, the transform processor uses OTTL to reshape data in-flight. Here we normalise severity text to uppercase, truncate oversized attributes, and stamp a processing marker. OTTL is incredibly powerful — you can parse, rename, compute, and restructure any telemetry field."
+**2. Attributes Processor**
+> "Next, the attributes processor manipulates log record attributes directly. It stamps a processing marker, and cleans up temporary attributes left over from parsing. You can insert, update, delete, or even hash attribute values — great for normalisation and housekeeping."
 
-**3. Filter Processor**
-> "The filter processor drops the noise. Watch — all those DEBUG health-check logs and readiness probes that flood your observability backend? Gone. We keep only actionable INFO, WARN, and ERROR logs. This directly reduces storage costs and improves signal-to-noise ratio."
+**3. Transform Processor**
+> "The transform processor is where OTTL really shines. We normalise severity text to uppercase, truncate oversized attributes, and — crucially — **redact PII in-flight**. Credit card numbers, Social Security Numbers, email addresses, API keys, JWT tokens — all replaced with `****` using `replace_pattern` before the data leaves the collector. Compliance-ready telemetry, zero application changes."
 
-**4. Redaction Processor**
-> "Finally, the redaction processor scrubs sensitive data. Credit card numbers, Social Security Numbers, email addresses, API keys, JWT tokens — all redacted before telemetry leaves the collector. This is compliance-ready telemetry out of the box."
+**4. Filter Processor**
+> "Finally, the filter processor drops the noise. All those DEBUG health-check logs and readiness probes that flood your observability backend? Gone. We keep only actionable INFO, WARN, and ERROR logs. This directly reduces storage costs and improves signal-to-noise ratio."
 
 ### Closing
 > "Four processors, three receivers, zero application changes, all running on OpenShift with a Red Hat supported, enterprise-grade OpenTelemetry distribution."

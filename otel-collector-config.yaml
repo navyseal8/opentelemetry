@@ -3,8 +3,8 @@
 #
 # This config demonstrates:
 #   Receivers  : filelogreceiver, otlpjsonfilereceiver, journaldreceiver
-#   Processors : resourceprocessor, transformprocessor, filterprocessor,
-#                redactionprocessor
+#   Processors : resourceprocessor, attributesprocessor, transformprocessor,
+#                filterprocessor
 #   Exporter   : debugexporter (prints to stdout so you can see results)
 ###############################################################################
 
@@ -57,22 +57,45 @@ processors:
         value: "true"
         action: insert
 
-  # ── 2. Transform Processor ────────────────────────────────────────────────
+  # ── 2. Attributes Processor ──────────────────────────────────────────────
+  # Manipulates log record attributes — insert, update, delete, hash.
+  # DEMO POINT: Clean up parsed attributes and stamp a processing marker.
+  attributes:
+    actions:
+      - key: processed_by
+        value: rhbo-attributes-processor
+        action: upsert
+      - key: severity
+        action: delete
+      - key: timestamp
+        action: delete
+
+  # ── 3. Transform Processor ────────────────────────────────────────────────
   # Uses OTTL (OpenTelemetry Transformation Language) to reshape data in-flight.
-  # DEMO POINT: Parse, enrich, and normalise without changing source applications.
+  # DEMO POINT: Parse, enrich, normalise, AND redact PII — all without changing
+  # source applications.
   transform:
     error_mode: ignore
     log_statements:
       - context: log
         statements:
-          # Truncate very long log bodies to 500 chars
+          # Truncate very long attribute values to 500 chars
           - truncate_all(attributes, 500)
-          # Add a processed-by marker so you can prove the transform ran
-          - set(attributes["processed_by"], "rhbo-transform-processor")
           # Uppercase the severity text for normalisation
           - set(severity_text, ConvertCase(severity_text, "upper"))
+          # ── PII Redaction via OTTL ────────────────────────────────────
+          # Credit card numbers (Visa, MC, Amex patterns)
+          - replace_pattern(body, "\\b[3-6]\\d{3}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b", "****")
+          # US Social Security Numbers
+          - replace_pattern(body, "\\b\\d{3}-\\d{2}-\\d{4}\\b", "****")
+          # Email addresses
+          - replace_pattern(body, "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b", "****")
+          # API keys / tokens (generic sk- prefix pattern)
+          - replace_pattern(body, "\\bsk-[A-Za-z0-9]{10,}\\b", "****")
+          # JWT-like tokens
+          - replace_pattern(body, "\\beyJ[A-Za-z0-9_-]+\\.[\\w-]+\\b", "****")
 
-  # ── 3. Filter Processor ──────────────────────────────────────────────────
+  # ── 4. Filter Processor ──────────────────────────────────────────────────
   # Drops telemetry that matches conditions — reduces noise and cost.
   # DEMO POINT: Eliminates health-check and debug spam before export.
   filter:
@@ -83,24 +106,6 @@ processors:
         - 'severity_number < 9'
         # Drop health-check / readiness probe logs
         - 'IsMatch(body, "(?i)(health|healthz|ready|readiness|liveness)")'
-
-  # ── 4. Redaction Processor ────────────────────────────────────────────────
-  # Scrubs sensitive data (PII, secrets) from log bodies and attributes.
-  # DEMO POINT: Compliance-ready telemetry — no credit cards, SSNs, or tokens leak.
-  redaction:
-    allow_all_keys: true
-    blocked_values:
-      # Credit card numbers (Visa, MC, Amex patterns)
-      - '\b[3-6]\d{3}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b'
-      # US Social Security Numbers
-      - '\b\d{3}-\d{2}-\d{4}\b'
-      # Email addresses
-      - '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-      # API keys / tokens (generic sk- prefix pattern)
-      - '\bsk-[A-Za-z0-9]{10,}\b'
-      # JWT-like tokens
-      - '\beyJ[A-Za-z0-9_-]+\.[\w-]+\b'
-    summary: debug
 
 exporters:
   # Debug exporter prints everything to stdout — perfect for demos.
@@ -118,22 +123,19 @@ service:
       level: info
   pipelines:
     # ── Pipeline: File Logs ──────────────────────────────────────────────
-    # filelogreceiver → all 4 processors → debug exporter
     logs/filelog:
       receivers: [filelog]
-      processors: [resource, transform, filter, redaction]
+      processors: [resource, attributes, transform, filter]
       exporters: [debug]
 
     # ── Pipeline: OTLP JSON File ─────────────────────────────────────────
-    # otlpjsonfilereceiver → all 4 processors → debug exporter
     logs/otlpjson:
       receivers: [otlpjsonfile]
-      processors: [resource, transform, filter, redaction]
+      processors: [resource, attributes, transform, filter]
       exporters: [debug]
 
     # ── Pipeline: Journald ───────────────────────────────────────────────
-    # journaldreceiver → all 4 processors → debug exporter
     logs/journald:
       receivers: [journald]
-      processors: [resource, transform, filter, redaction]
+      processors: [resource, attributes, transform, filter]
       exporters: [debug]
