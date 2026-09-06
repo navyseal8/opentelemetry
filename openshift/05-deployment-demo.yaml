@@ -84,7 +84,7 @@ spec:
 
         # ── RHBO Collector (sidecar) ───────────────────────────────────
         - name: otel-collector
-          image: registry.redhat.io/rhosdt/opentelemetry-collector-rhel8:latest
+          image: registry.redhat.io/rhosdt/opentelemetry-collector-rhel9:latest
           args: ["--config", "/etc/otelcol/config.yaml"]
           volumeMounts:
             - name: shared-logs

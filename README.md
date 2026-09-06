@@ -212,7 +212,7 @@ You will see:
 The sidecar deployment (`04-deployment-demo.yaml`) uses:
 
 ```yaml
-image: registry.redhat.io/rhosdt/opentelemetry-collector-rhel8:latest
+image: registry.redhat.io/rhosdt/opentelemetry-collector-rhel9:latest
 ```
 
 Replace with the specific version tag for your environment if needed.
