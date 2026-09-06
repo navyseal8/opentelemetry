@@ -8,7 +8,7 @@
 #
 # Run this inside the log-generator container to simulate live traffic.
 ###############################################################################
-set -euo pipefail
+set -eo pipefail
 
 LOG_DIR="${LOG_DIR:-/var/log/demo}"
 APP_LOG="$LOG_DIR/app.log"

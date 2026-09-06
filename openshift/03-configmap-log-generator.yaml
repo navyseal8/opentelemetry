@@ -9,7 +9,7 @@ metadata:
 data:
   generate-logs.sh: |
     #!/usr/bin/env bash
-    set -euo pipefail
+    set -eo pipefail
 
     LOG_DIR="${LOG_DIR:-/var/log/demo}"
     APP_LOG="$LOG_DIR/app.log"
