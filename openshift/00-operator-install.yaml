@@ -1,0 +1,43 @@
+###############################################################################
+# Install the Red Hat Build of OpenTelemetry (RHBO) Operator via OLM
+#
+# Ref: https://docs.redhat.com/en/documentation/red_hat_build_of_opentelemetry/3.9/html/installing_red_hat_build_of_opentelemetry/install-otel
+#
+# This creates:
+#   1. The operator namespace (openshift-opentelemetry-operator)
+#   2. An OperatorGroup (all-namespaces install mode)
+#   3. A Subscription to the stable channel from redhat-operators catalog
+###############################################################################
+
+# ── 1. Operator Project / Namespace ─────────────────────────────────────────
+apiVersion: project.openshift.io/v1
+kind: Project
+metadata:
+  name: openshift-opentelemetry-operator
+  labels:
+    kubernetes.io/metadata.name: openshift-opentelemetry-operator
+    openshift.io/cluster-monitoring: "true"
+
+---
+# ── 2. OperatorGroup (all namespaces) ──────────────────────────────────────
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-opentelemetry-operator
+  namespace: openshift-opentelemetry-operator
+spec:
+  upgradeStrategy: Default
+
+---
+# ── 3. Subscription ────────────────────────────────────────────────────────
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: opentelemetry-product
+  namespace: openshift-opentelemetry-operator
+spec:
+  channel: stable
+  installPlanApproval: Automatic
+  name: opentelemetry-product
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

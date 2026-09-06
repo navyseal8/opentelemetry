@@ -1,0 +1,139 @@
+###############################################################################
+# Red Hat Build of OpenTelemetry (RHBO) — Processor & Receiver Demo
+#
+# This config demonstrates:
+#   Receivers  : filelogreceiver, otlpjsonfilereceiver, journaldreceiver
+#   Processors : resourceprocessor, transformprocessor, filterprocessor,
+#                redactionprocessor
+#   Exporter   : debugexporter (prints to stdout so you can see results)
+###############################################################################
+
+receivers:
+  # ── 1. File Log Receiver ──────────────────────────────────────────────────
+  # Tails a plain-text application log file line-by-line.
+  filelog:
+    include:
+      - /var/log/demo/app.log
+    start_at: beginning
+    operators:
+      # Parse the structured log line into attributes
+      - type: regex_parser
+        regex: '^(?P<timestamp>\S+)\s+(?P<severity>\S+)\s+\[(?P<service>[^\]]+)\]\s+(?P<message>.+)$'
+        timestamp:
+          parse_from: attributes.timestamp
+          layout: '%Y-%m-%dT%H:%M:%SZ'
+        severity:
+          parse_from: attributes.severity
+
+  # ── 2. OTLP JSON File Receiver ───────────────────────────────────────────
+  # Reads OTLP-formatted JSON log records from a file (one JSON object per line).
+  otlpjsonfile:
+    include:
+      - /var/log/demo/otlp-logs.jsonl
+    start_at: beginning
+
+  # ── 3. Journald Receiver ─────────────────────────────────────────────────
+  # Reads logs from the systemd journal. Requires access to the journal socket.
+  journald:
+    directory: /var/log/journal
+    units:
+      - sshd
+      - systemd
+    priority: info
+
+processors:
+  # ── 1. Resource Processor ─────────────────────────────────────────────────
+  # Enriches every log record with deployment metadata.
+  # DEMO POINT: Adds consistent resource attributes across all telemetry.
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: staging
+        action: upsert
+      - key: team.name
+        value: platform-engineering
+        action: upsert
+      - key: rhbo.demo
+        value: "true"
+        action: insert
+
+  # ── 2. Transform Processor ────────────────────────────────────────────────
+  # Uses OTTL (OpenTelemetry Transformation Language) to reshape data in-flight.
+  # DEMO POINT: Parse, enrich, and normalise without changing source applications.
+  transform:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          # Truncate very long log bodies to 500 chars
+          - truncate_all(attributes, 500)
+          # Add a processed-by marker so you can prove the transform ran
+          - set(attributes["processed_by"], "rhbo-transform-processor")
+          # Uppercase the severity text for normalisation
+          - set(severity_text, ConvertCase(severity_text, "upper"))
+
+  # ── 3. Filter Processor ──────────────────────────────────────────────────
+  # Drops telemetry that matches conditions — reduces noise and cost.
+  # DEMO POINT: Eliminates health-check and debug spam before export.
+  filter:
+    error_mode: ignore
+    logs:
+      log_record:
+        # Drop DEBUG-level logs
+        - 'severity_number < 9'
+        # Drop health-check / readiness probe logs
+        - 'IsMatch(body, "(?i)(health|healthz|ready|readiness|liveness)")'
+
+  # ── 4. Redaction Processor ────────────────────────────────────────────────
+  # Scrubs sensitive data (PII, secrets) from log bodies and attributes.
+  # DEMO POINT: Compliance-ready telemetry — no credit cards, SSNs, or tokens leak.
+  redaction:
+    allow_all_keys: true
+    blocked_values:
+      # Credit card numbers (Visa, MC, Amex patterns)
+      - '\b[3-6]\d{3}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b'
+      # US Social Security Numbers
+      - '\b\d{3}-\d{2}-\d{4}\b'
+      # Email addresses
+      - '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+      # API keys / tokens (generic sk- prefix pattern)
+      - '\bsk-[A-Za-z0-9]{10,}\b'
+      # JWT-like tokens
+      - '\beyJ[A-Za-z0-9_-]+\.[\w-]+\b'
+    summary: debug
+
+exporters:
+  # Debug exporter prints everything to stdout — perfect for demos.
+  debug:
+    verbosity: detailed
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    # ── Pipeline: File Logs ──────────────────────────────────────────────
+    # filelogreceiver → all 4 processors → debug exporter
+    logs/filelog:
+      receivers: [filelog]
+      processors: [resource, transform, filter, redaction]
+      exporters: [debug]
+
+    # ── Pipeline: OTLP JSON File ─────────────────────────────────────────
+    # otlpjsonfilereceiver → all 4 processors → debug exporter
+    logs/otlpjson:
+      receivers: [otlpjsonfile]
+      processors: [resource, transform, filter, redaction]
+      exporters: [debug]
+
+    # ── Pipeline: Journald ───────────────────────────────────────────────
+    # journaldreceiver → all 4 processors → debug exporter
+    logs/journald:
+      receivers: [journald]
+      processors: [resource, transform, filter, redaction]
+      exporters: [debug]

@@ -1,0 +1,14 @@
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+
+RUN microdnf install -y bash coreutils && microdnf clean all
+
+COPY scripts/generate-logs.sh /usr/local/bin/generate-logs.sh
+COPY data/ /seed-data/
+
+RUN chmod +x /usr/local/bin/generate-logs.sh
+
+CMD ["/bin/bash", "-c", "\
+  mkdir -p /var/log/demo && \
+  cp /seed-data/app.log /var/log/demo/app.log && \
+  cp /seed-data/otlp-logs.jsonl /var/log/demo/otlp-logs.jsonl && \
+  exec /usr/local/bin/generate-logs.sh"]

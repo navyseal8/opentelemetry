@@ -1,0 +1,156 @@
+###############################################################################
+# DaemonSet: RHBO Collector for Journald Receiver
+#
+# Runs on every node to read the systemd journal.
+# Requires privileged SCC or a custom SCC with journal access.
+#
+# Apply the SCC first:
+#   oc adm policy add-scc-to-user privileged -z rhbo-journald -n rhbo-demo
+###############################################################################
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rhbo-journald
+  namespace: rhbo-demo
+  labels:
+    app.kubernetes.io/part-of: rhbo-demo
+    app.kubernetes.io/component: journald-collector
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: rhbo-journald-collector
+  namespace: rhbo-demo
+  labels:
+    app: rhbo-journald-collector
+    app.kubernetes.io/part-of: rhbo-demo
+    app.kubernetes.io/component: journald-collector
+spec:
+  selector:
+    matchLabels:
+      app: rhbo-journald-collector
+  template:
+    metadata:
+      labels:
+        app: rhbo-journald-collector
+    spec:
+      serviceAccountName: rhbo-journald
+      volumes:
+        - name: journal
+          hostPath:
+            path: /var/log/journal
+            type: Directory
+        - name: machine-id
+          hostPath:
+            path: /etc/machine-id
+            type: File
+        - name: collector-config
+          configMap:
+            name: otel-journald-config
+
+      containers:
+        - name: otel-collector
+          image: registry.redhat.io/rhosdt/opentelemetry-collector-rhel8:latest
+          args: ["--config", "/etc/otelcol/config.yaml"]
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: journal
+              mountPath: /var/log/journal
+              readOnly: true
+            - name: machine-id
+              mountPath: /etc/machine-id
+              readOnly: true
+            - name: collector-config
+              mountPath: /etc/otelcol
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-journald-config
+  namespace: rhbo-demo
+  labels:
+    app.kubernetes.io/part-of: rhbo-demo
+    app.kubernetes.io/component: journald-collector
+data:
+  config.yaml: |
+    ###########################################################################
+    # RHBO Collector — Journald Receiver Pipeline
+    ###########################################################################
+    receivers:
+      journald:
+        directory: /var/log/journal
+        units:
+          - sshd
+          - kubelet
+          - crio
+          - systemd
+        priority: info
+
+    processors:
+      resource:
+        attributes:
+          - key: deployment.environment
+            value: staging
+            action: upsert
+          - key: team.name
+            value: platform-engineering
+            action: upsert
+          - key: rhbo.demo
+            value: "true"
+            action: insert
+          - key: k8s.node.name
+            value: ${env:NODE_NAME}
+            action: upsert
+
+      transform:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - truncate_all(attributes, 500)
+              - set(attributes["processed_by"], "rhbo-transform-processor")
+              - set(severity_text, ConvertCase(severity_text, "upper"))
+
+      filter:
+        error_mode: ignore
+        logs:
+          log_record:
+            - 'severity_number < 9'
+            - 'IsMatch(body, "(?i)(health|healthz|ready|readiness|liveness)")'
+
+      redaction:
+        allow_all_keys: true
+        blocked_values:
+          - '\b[3-6]\d{3}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b'
+          - '\b\d{3}-\d{2}-\d{4}\b'
+          - '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+          - '\bsk-[A-Za-z0-9]{10,}\b'
+        summary: debug
+
+    exporters:
+      debug:
+        verbosity: detailed
+
+    service:
+      telemetry:
+        logs:
+          level: info
+      pipelines:
+        logs/journald:
+          receivers: [journald]
+          processors: [resource, transform, filter, redaction]
+          exporters: [debug]

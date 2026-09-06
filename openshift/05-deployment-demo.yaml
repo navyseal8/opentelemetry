@@ -1,0 +1,102 @@
+###############################################################################
+# Sidecar Deployment: log-generator + RHBO collector in the same Pod
+#
+# The two containers share an emptyDir volume at /var/log/demo.
+# The log-generator writes sample logs; the collector reads and processes them.
+###############################################################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rhbo-demo
+  namespace: rhbo-demo
+  labels:
+    app: rhbo-demo
+    app.kubernetes.io/part-of: rhbo-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rhbo-demo
+  template:
+    metadata:
+      labels:
+        app: rhbo-demo
+    spec:
+      volumes:
+        # Shared volume for log files between generator and collector
+        - name: shared-logs
+          emptyDir: {}
+        # Seed data mounted from ConfigMap
+        - name: seed-data
+          configMap:
+            name: sample-log-data
+        # Log generator script
+        - name: generator-script
+          configMap:
+            name: log-generator-script
+            defaultMode: 0755
+        # Collector configuration
+        - name: collector-config
+          configMap:
+            name: otel-collector-config
+
+      initContainers:
+        # Copy seed data into the shared emptyDir before main containers start
+        - name: seed-logs
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              cp /seed-data/app.log /var/log/demo/app.log
+              cp /seed-data/otlp-logs.jsonl /var/log/demo/otlp-logs.jsonl
+              echo "[init] Seed data copied to /var/log/demo/"
+          volumeMounts:
+            - name: seed-data
+              mountPath: /seed-data
+              readOnly: true
+            - name: shared-logs
+              mountPath: /var/log/demo
+
+      containers:
+        # ── Log Generator ──────────────────────────────────────────────
+        - name: log-generator
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+          command: ["/bin/bash", "/scripts/generate-logs.sh"]
+          env:
+            - name: LOG_DIR
+              value: /var/log/demo
+            - name: INTERVAL
+              value: "3"
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /var/log/demo
+            - name: generator-script
+              mountPath: /scripts
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+
+        # ── RHBO Collector (sidecar) ───────────────────────────────────
+        - name: otel-collector
+          image: registry.redhat.io/rhosdt/opentelemetry-collector-rhel8:latest
+          args: ["--config", "/etc/otelcol/config.yaml"]
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /var/log/demo
+              readOnly: true
+            - name: collector-config
+              mountPath: /etc/otelcol
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

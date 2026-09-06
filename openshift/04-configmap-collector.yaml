@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: rhbo-demo
+  labels:
+    app.kubernetes.io/part-of: rhbo-demo
+    app.kubernetes.io/component: collector
+data:
+  config.yaml: |
+    ###########################################################################
+    # RHBO Collector Config — Sidecar Deployment (filelog + otlpjsonfile)
+    ###########################################################################
+    receivers:
+      filelog:
+        include:
+          - /var/log/demo/app.log
+        start_at: beginning
+        operators:
+          - type: regex_parser
+            regex: '^(?P<timestamp>\S+)\s+(?P<severity>\S+)\s+\[(?P<service>[^\]]+)\]\s+(?P<message>.+)$'
+            timestamp:
+              parse_from: attributes.timestamp
+              layout: '%Y-%m-%dT%H:%M:%SZ'
+            severity:
+              parse_from: attributes.severity
+
+      otlpjsonfile:
+        include:
+          - /var/log/demo/otlp-logs.jsonl
+        start_at: beginning
+
+    processors:
+      resource:
+        attributes:
+          - key: deployment.environment
+            value: staging
+            action: upsert
+          - key: team.name
+            value: platform-engineering
+            action: upsert
+          - key: rhbo.demo
+            value: "true"
+            action: insert
+          - key: k8s.cluster.name
+            value: ocp-demo
+            action: upsert
+
+      transform:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - truncate_all(attributes, 500)
+              - set(attributes["processed_by"], "rhbo-transform-processor")
+              - set(severity_text, ConvertCase(severity_text, "upper"))
+
+      filter:
+        error_mode: ignore
+        logs:
+          log_record:
+            - 'severity_number < 9'
+            - 'IsMatch(body, "(?i)(health|healthz|ready|readiness|liveness)")'
+
+      redaction:
+        allow_all_keys: true
+        blocked_values:
+          - '\b[3-6]\d{3}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b'
+          - '\b\d{3}-\d{2}-\d{4}\b'
+          - '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+          - '\bsk-[A-Za-z0-9]{10,}\b'
+          - '\beyJ[A-Za-z0-9_-]+\.[\w-]+\b'
+        summary: debug
+
+    exporters:
+      debug:
+        verbosity: detailed
+
+    service:
+      telemetry:
+        logs:
+          level: info
+      pipelines:
+        logs/filelog:
+          receivers: [filelog]
+          processors: [resource, transform, filter, redaction]
+          exporters: [debug]
+        logs/otlpjson:
+          receivers: [otlpjsonfile]
+          processors: [resource, transform, filter, redaction]
+          exporters: [debug]

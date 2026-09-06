@@ -1,0 +1,60 @@
+###############################################################################
+# RHBO Processor & Receiver Demo — Docker Compose
+#
+# Usage:
+#   docker compose up              # file + OTLP JSON receivers (works everywhere)
+#   docker compose --profile journald up   # adds journald receiver (Linux only)
+#
+# Watch the collector logs to see processors in action:
+#   docker compose logs -f otel-collector
+###############################################################################
+
+volumes:
+  shared-logs:
+
+services:
+  # ── Log Generator ────────────────────────────────────────────────────────
+  # Produces sample app logs (with PII) into a shared volume.
+  log-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile.log-generator
+    environment:
+      - LOG_DIR=/var/log/demo
+      - INTERVAL=3
+    volumes:
+      - shared-logs:/var/log/demo
+
+  # ── RHBO Collector ───────────────────────────────────────────────────────
+  # Runs the Red Hat build of OpenTelemetry collector.
+  otel-collector:
+    # Replace with the actual RHBO image for your environment, e.g.:
+    #   registry.redhat.io/rhosdt/opentelemetry-collector-rhel8:latest
+    # For this demo, we use the upstream contrib image which has the same components.
+    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.115.0
+    command: ["--config", "/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector-config-no-journald.yaml:/etc/otelcol/config.yaml:ro
+      - shared-logs:/var/log/demo:ro
+    ports:
+      - "13133:13133"   # health check
+    depends_on:
+      - log-generator
+    restart: unless-stopped
+
+  # ── RHBO Collector (with Journald) ───────────────────────────────────────
+  # Activate with: docker compose --profile journald up
+  otel-collector-journald:
+    profiles: ["journald"]
+    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.115.0
+    command: ["--config", "/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+      - shared-logs:/var/log/demo:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+    ports:
+      - "13133:13133"
+    depends_on:
+      - log-generator
+    restart: unless-stopped

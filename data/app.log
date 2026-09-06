@@ -1,0 +1,10 @@
+2026-09-05T10:00:01Z INFO  [order-service] Order #12345 placed by user john.doe@example.com, credit card 4111-1111-1111-1111, amount $299.99
+2026-09-05T10:00:02Z DEBUG [order-service] Health check passed, uptime=3600s
+2026-09-05T10:00:03Z WARN  [order-service] Slow query detected: SELECT * FROM orders WHERE user_ssn='123-45-6789' took 2.3s
+2026-09-05T10:00:04Z INFO  [payment-service] Payment processed for order #12345, card=4222-2222-2222-2222, email=jane.smith@corp.com
+2026-09-05T10:00:05Z DEBUG [order-service] GET /healthz returned 200
+2026-09-05T10:00:06Z ERROR [inventory-service] Failed to update stock for SKU-9876: connection timeout, retry_count=3
+2026-09-05T10:00:07Z INFO  [user-service] User registration: name=Alice Johnson, phone=+1-555-867-5309, ssn=987-65-4321
+2026-09-05T10:00:08Z DEBUG [order-service] Health check passed, uptime=3607s
+2026-09-05T10:00:09Z INFO  [shipping-service] Shipment created for order #12345, destination=123 Main St, tracking=TRACK-ABC-789
+2026-09-05T10:00:10Z WARN  [payment-service] Rate limit approaching: 450/500 requests, api_key=sk-prod-abc123xyz789

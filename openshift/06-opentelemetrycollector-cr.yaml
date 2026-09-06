@@ -1,0 +1,107 @@
+###############################################################################
+# OpenTelemetryCollector CR — Operator-managed approach
+#
+# Prerequisites:
+#   1. Install "Red Hat build of OpenTelemetry" operator from OperatorHub
+#   2. Apply this CR after the operator is running
+#
+# This CR creates a Deployment-mode collector that reads from a shared volume.
+# Pair with the log-generator Deployment (04-deployment-demo.yaml) or use
+# the standalone log-generator (07-deployment-log-generator-standalone.yaml).
+###############################################################################
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: rhbo-demo-collector
+  namespace: rhbo-demo
+  labels:
+    app.kubernetes.io/part-of: rhbo-demo
+spec:
+  mode: sidecar
+  config:
+    receivers:
+      filelog:
+        include:
+          - /var/log/demo/app.log
+        start_at: beginning
+        operators:
+          - type: regex_parser
+            regex: '^(?P<timestamp>\S+)\s+(?P<severity>\S+)\s+\[(?P<service>[^\]]+)\]\s+(?P<message>.+)$'
+            timestamp:
+              parse_from: attributes.timestamp
+              layout: '%Y-%m-%dT%H:%M:%SZ'
+            severity:
+              parse_from: attributes.severity
+
+      otlpjsonfile:
+        include:
+          - /var/log/demo/otlp-logs.jsonl
+        start_at: beginning
+
+    processors:
+      resource:
+        attributes:
+          - key: deployment.environment
+            value: staging
+            action: upsert
+          - key: team.name
+            value: platform-engineering
+            action: upsert
+          - key: rhbo.demo
+            value: "true"
+            action: insert
+          - key: k8s.cluster.name
+            value: ocp-demo
+            action: upsert
+
+      transform:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - truncate_all(attributes, 500)
+              - set(attributes["processed_by"], "rhbo-transform-processor")
+              - set(severity_text, ConvertCase(severity_text, "upper"))
+
+      filter:
+        error_mode: ignore
+        logs:
+          log_record:
+            - 'severity_number < 9'
+            - 'IsMatch(body, "(?i)(health|healthz|ready|readiness|liveness)")'
+
+      redaction:
+        allow_all_keys: true
+        blocked_values:
+          - '\b[3-6]\d{3}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b'
+          - '\b\d{3}-\d{2}-\d{4}\b'
+          - '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+          - '\bsk-[A-Za-z0-9]{10,}\b'
+          - '\beyJ[A-Za-z0-9_-]+\.[\w-]+\b'
+        summary: debug
+
+    exporters:
+      debug:
+        verbosity: detailed
+
+    service:
+      telemetry:
+        logs:
+          level: info
+      pipelines:
+        logs/filelog:
+          receivers: [filelog]
+          processors: [resource, transform, filter, redaction]
+          exporters: [debug]
+        logs/otlpjson:
+          receivers: [otlpjsonfile]
+          processors: [resource, transform, filter, redaction]
+          exporters: [debug]
+
+  volumeMounts:
+    - name: shared-logs
+      mountPath: /var/log/demo
+      readOnly: true
+  volumes:
+    - name: shared-logs
+      emptyDir: {}
