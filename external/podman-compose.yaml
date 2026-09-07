@@ -50,7 +50,7 @@ services:
     container_name: collector
     command: ["--config", "/etc/otelcol/config.yaml"]
     environment:
-      OTEL_EXPORTER_OTLP_ENDPOINT: "https://CHANGEME-rhbo-collector-route.apps.cluster.example.com:443"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "https://rhbo-collector-otlp-rhbo-demo.apps.cluster-g28st.dyn.redhatworkshops.io"
     volumes:
       - ./collector-agent.yaml:/etc/otelcol/config.yaml:z
       - shared-logs:/var/log/demo:z
@@ -73,7 +73,7 @@ services:
       INTERVAL: "2"
     volumes:
       - ./scripts:/scripts:z
-    command: ["/bin/bash", "-c", "microdnf install -y curl && /bin/bash /scripts/generate-traces.sh"]
+    command: ["/bin/bash", "/scripts/generate-traces.sh"]
     depends_on:
       - collector
     restart: unless-stopped

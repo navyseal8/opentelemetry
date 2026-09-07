@@ -137,7 +137,7 @@ if ! $SKIP_OPERATORS; then
   wait_for_csv opentelemetry-product openshift-opentelemetry-operator
   wait_for_csv loki-operator openshift-operators-redhat
   wait_for_csv tempo-product openshift-tempo-operator
-  wait_for_csv cluster-observability-operator openshift-operators
+  wait_for_csv cluster-observability-operator openshift-cluster-observability-operator
 fi
 
 if $OPERATORS_ONLY; then

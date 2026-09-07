@@ -109,7 +109,7 @@ These processors run on the OpenShift RHBO collector, transforming telemetry bef
 | Red Hat build of OpenTelemetry | `opentelemetry-product` | `openshift-opentelemetry-operator` | `stable` |
 | Loki Operator | `loki-operator` | `openshift-operators-redhat` | `stable-6.6` |
 | Tempo Operator | `tempo-product` | `openshift-tempo-operator` | `stable` |
-| Cluster Observability Operator | `cluster-observability-operator` | `openshift-operators` | `development` |
+| Cluster Observability Operator | `cluster-observability-operator` | `openshift-cluster-observability-operator` | `stable` |
 
 ---
 

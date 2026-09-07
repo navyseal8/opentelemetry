@@ -75,7 +75,7 @@ exporters:
   # via the OTEL_EXPORTER_OTLP_ENDPOINT environment variable.
   # ---------------------------------------------------------------------------
   otlp:
-    endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
+    endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}:443"
     tls:
       insecure_skip_verify: true
 
