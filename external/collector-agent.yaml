@@ -70,12 +70,13 @@ receivers:
 
 exporters:
   # ---------------------------------------------------------------------------
-  # otlp — Ships telemetry to the OpenShift cluster's RHBO collector via the
-  # Route exposed by the OpenTelemetryCollector CR. The endpoint is injected
-  # via the OTEL_EXPORTER_OTLP_ENDPOINT environment variable.
+  # otlphttp — Ships telemetry to the OpenShift cluster's RHBO collector via
+  # the edge-terminated Route. OpenShift Routes handle HTTPS (not raw gRPC),
+  # so we must use the HTTP exporter. The endpoint is injected via the
+  # OTEL_EXPORTER_OTLP_ENDPOINT environment variable.
   # ---------------------------------------------------------------------------
-  otlp:
-    endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}:443"
+  otlphttp:
+    endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
     tls:
       insecure_skip_verify: true
 
@@ -91,22 +92,22 @@ service:
     # Logs from the plain-text application log file → OpenShift
     logs/filelog:
       receivers: [filelog]
-      exporters: [otlp]
+      exporters: [otlphttp]
 
     # Logs from OTLP JSON file → OpenShift
     logs/otlpjson:
       receivers: [otlpjsonfile]
-      exporters: [otlp]
+      exporters: [otlphttp]
 
     # System journal logs → OpenShift
     logs/journald:
       receivers: [journald]
-      exporters: [otlp]
+      exporters: [otlphttp]
 
     # Traces received via OTLP (from generate-traces.sh) → OpenShift
     traces:
       receivers: [otlp]
-      exporters: [otlp]
+      exporters: [otlphttp]
 
     # Debug pipeline — filelog output printed to stdout for local verification
     logs/debug:

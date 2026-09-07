@@ -11,6 +11,10 @@ metadata:
     app: rhbo-collector-gateway
 data:
   config.yaml: |
+    extensions:
+      bearertokenauth:
+        filename: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+
     receivers:
       otlp:
         protocols:
@@ -99,14 +103,20 @@ data:
           X-Scope-OrgID: application
 
       otlp/tempo:
-        endpoint: rhbo-tempo-distributor.rhbo-demo.svc:4317
+        endpoint: tempo-rhbo-tempo-gateway.rhbo-demo.svc:8090
         tls:
-          insecure: true
+          insecure: false
+          ca_file: "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
+        auth:
+          authenticator: bearertokenauth
+        headers:
+          X-Scope-OrgID: "rhbo-demo"
 
       debug:
         verbosity: detailed
 
     service:
+      extensions: [bearertokenauth]
       telemetry:
         logs:
           level: info
@@ -137,6 +147,7 @@ spec:
       labels:
         app: rhbo-collector-gateway
     spec:
+      serviceAccountName: rhbo-collector-gateway
       containers:
         - name: collector
           image: registry.redhat.io/rhosdt/opentelemetry-collector-rhel9:latest

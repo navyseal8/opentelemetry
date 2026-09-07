@@ -50,6 +50,8 @@ if $TEARDOWN; then
   oc delete job minio-bucket-setup -n openshift-logging --ignore-not-found 2>/dev/null || true
   oc delete service minio -n openshift-logging --ignore-not-found 2>/dev/null || true
   oc delete uiplugin logging distributed-tracing --ignore-not-found 2>/dev/null || true
+  oc delete clusterrolebinding rhbo-collector-traces-write rhbo-tempo-traces-reader --ignore-not-found 2>/dev/null || true
+  oc delete clusterrole rhbo-tempo-traces-write rhbo-tempo-traces-read --ignore-not-found 2>/dev/null || true
   log "Demo workloads removed. Operators left intact."
   exit 0
 fi
@@ -63,6 +65,8 @@ if $TEARDOWN_ALL; then
   oc delete job minio-bucket-setup -n openshift-logging --ignore-not-found 2>/dev/null || true
   oc delete service minio -n openshift-logging --ignore-not-found 2>/dev/null || true
   oc delete uiplugin logging distributed-tracing --ignore-not-found 2>/dev/null || true
+  oc delete clusterrolebinding rhbo-collector-traces-write rhbo-tempo-traces-reader --ignore-not-found 2>/dev/null || true
+  oc delete clusterrole rhbo-tempo-traces-write rhbo-tempo-traces-read --ignore-not-found 2>/dev/null || true
   for sub in opentelemetry-product loki-operator tempo-product cluster-observability-operator; do
     ns=$(oc get subscription "$sub" --all-namespaces -o jsonpath='{.items[0].metadata.namespace}' 2>/dev/null || echo "")
     if [[ -n "$ns" ]]; then
@@ -180,6 +184,9 @@ oc wait --for=condition=Ready tempomonolithic/rhbo-tempo -n rhbo-demo --timeout=
 # PHASE 3 — RHBO Collector Gateway + Route
 ###############################################################################
 hdr "Phase 3: RHBO Collector Gateway"
+
+log "Applying Tempo RBAC (ServiceAccount + ClusterRoles)..."
+oc apply -f "$SCRIPT_DIR/collector/22-tempo-rbac.yaml"
 
 oc apply -f "$SCRIPT_DIR/collector/20-collector-gateway.yaml"
 oc apply -f "$SCRIPT_DIR/collector/21-route.yaml"

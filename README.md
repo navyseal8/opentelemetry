@@ -42,7 +42,7 @@ flowchart LR
       end
 
       lokiExp["otlphttpexporter → Loki"]
-      tempoExp["otlpexporter → Tempo"]
+      tempoExp["otlpexporter → Tempo<br/>(bearertokenauth + X-Scope-OrgID)"]
     end
 
     otlpRx --> P1
@@ -53,7 +53,7 @@ flowchart LR
     P4 --> tempoExp
 
     lokiExp --> loki["LokiStack<br/>(openshift-logging)"]
-    tempoExp --> tempo["TempoMonolithic<br/>(rhbo-demo)"]
+    tempoExp --> tempo["TempoMonolithic<br/>(multi-tenant, rhbo-demo)"]
 
     subgraph coo ["COO UI Plugins"]
       direction TB
@@ -97,7 +97,7 @@ These processors run on the OpenShift RHBO collector, transforming telemetry bef
 | Component | Purpose | Namespace |
 |---|---|---|
 | **LokiStack** | Log storage and querying | `openshift-logging` |
-| **TempoMonolithic** | Trace storage and querying | `rhbo-demo` |
+| **TempoMonolithic** | Trace storage and querying (multi-tenant) | `rhbo-demo` |
 | **MinIO** | S3-compatible object storage (demo only) | `openshift-logging` |
 | **COO Logging UIPlugin** | Observe > Logs in OpenShift Console (`otel` schema) | cluster-scoped |
 | **COO Tracing UIPlugin** | Observe > Traces in OpenShift Console | cluster-scoped |
@@ -211,10 +211,11 @@ oc logs -f deployment/rhbo-collector-gateway -n rhbo-demo
 
 ### In OpenShift Console > Observe > Traces
 
-- Select the `rhbo-tempo` Tempo instance
+- Select the `rhbo-tempo` Tempo instance and `rhbo-demo` tenant
 - Error traces are always present (red status)
 - Slow traces (>1s) are always present
 - Only ~10% of fast/normal traces are retained
+- Jaeger UI available via route: `https://tempo-rhbo-tempo-gateway-rhbo-demo.<domain>/api/traces/v1/rhbo-demo/search`
 
 ---
 
@@ -244,7 +245,8 @@ oc logs -f deployment/rhbo-collector-gateway -n rhbo-demo
 │   │   └── 13-tempo-monolithic.yaml          # TempoMonolithic CR
 │   ├── collector/
 │   │   ├── 20-collector-gateway.yaml         # RHBO collector: OTLP → processors → Loki/Tempo
-│   │   └── 21-route.yaml                     # TLS Route for external OTLP ingestion
+│   │   ├── 21-route.yaml                     # TLS Route for external OTLP ingestion
+│   │   └── 22-tempo-rbac.yaml                # SA + ClusterRoles for multi-tenant Tempo auth
 │   ├── ui/
 │   │   ├── 30-uiplugin-logging.yaml          # COO Logging UI (Observe > Logs)
 │   │   └── 31-uiplugin-tracing.yaml          # COO Tracing UI (Observe > Traces)
@@ -305,7 +307,9 @@ Both are **Red Hat supported** with the same collector binary and the same [comp
 
 > "The processed data flows into two Red Hat-supported backends:
 > - **Loki** for logs — deployed via the Loki Operator with a LokiStack custom resource
-> - **Tempo** for traces — deployed via the Tempo Operator as a TempoMonolithic instance
+> - **Tempo** for traces — deployed via the Tempo Operator as a TempoMonolithic instance **with multitenancy enabled**
+>
+> Tempo multitenancy is configured with OpenShift mode, meaning authentication uses native OpenShift OAuth and TokenReview, and authorization uses SubjectAccessReview. The collector authenticates using a ServiceAccount bearer token and sends an `X-Scope-OrgID` header to route traces to the correct tenant. RBAC ClusterRoles control who can write (the collector) and read (Console users) trace data. This is the same isolation model you'd use in production with multiple teams sharing a single Tempo instance.
 >
 > Both use MinIO for S3-compatible storage in this demo, but you'd swap in AWS S3, Azure Blob, or ODF in production."
 
