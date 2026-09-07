@@ -1,0 +1,114 @@
+# =============================================================================
+# RHBO Collector — External RHEL Agent Configuration
+# =============================================================================
+# This configuration is used by the Red Hat Build of OpenTelemetry (RHBO)
+# collector running on an external RHEL host. It ingests logs from files and
+# journald, receives traces via OTLP, and ships everything to an OpenShift
+# cluster over OTLP/gRPC.
+#
+# For bare-metal RHEL:
+#   sudo dnf install opentelemetry-collector
+#   sudo cp collector-agent.yaml /etc/opentelemetry-collector/config.yaml
+#   sudo systemctl enable --now opentelemetry-collector
+#
+# For Podman Compose:
+#   See podman-compose.yaml in this directory.
+# =============================================================================
+
+receivers:
+  # ---------------------------------------------------------------------------
+  # filelog — Reads structured application log lines from a plain-text file.
+  # The regex_parser operator extracts timestamp, severity, service name, and
+  # the message body so they map to proper OTLP log fields.
+  # ---------------------------------------------------------------------------
+  filelog:
+    include:
+      - /var/log/demo/app.log
+    start_at: beginning
+    operators:
+      - type: regex_parser
+        regex: '^(?P<timestamp>\S+)\s+(?P<severity>INFO|DEBUG|WARN|ERROR)\s+\[(?P<service>[^\]]+)\]\s+(?P<message>.+)$'
+        timestamp:
+          parse_from: attributes.timestamp
+          layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+        severity:
+          parse_from: attributes.severity
+
+  # ---------------------------------------------------------------------------
+  # otlpjsonfile — Reads OTLP JSON log records (one JSON object per line).
+  # Each line must be a valid {"resourceLogs":[...]} payload. This is useful
+  # when applications write structured OTLP-native logs directly to disk.
+  # ---------------------------------------------------------------------------
+  otlpjsonfile:
+    include:
+      - /var/log/demo/otlp-logs.jsonl
+    start_at: beginning
+
+  # ---------------------------------------------------------------------------
+  # journald — Reads system journal entries from selected systemd units.
+  # Captures sshd (security), systemd (lifecycle), and crond (scheduled tasks)
+  # at info priority and above.
+  # ---------------------------------------------------------------------------
+  journald:
+    directory: /var/log/journal
+    units:
+      - sshd
+      - systemd
+      - crond
+    priority: info
+
+  # ---------------------------------------------------------------------------
+  # otlp — Accepts traces (and logs) via gRPC and HTTP from local generators
+  # such as generate-traces.sh or any OTLP-instrumented application.
+  # ---------------------------------------------------------------------------
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  # ---------------------------------------------------------------------------
+  # otlp — Ships telemetry to the OpenShift cluster's RHBO collector via the
+  # Route exposed by the OpenTelemetryCollector CR. The endpoint is injected
+  # via the OTEL_EXPORTER_OTLP_ENDPOINT environment variable.
+  # ---------------------------------------------------------------------------
+  otlp:
+    endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
+    tls:
+      insecure_skip_verify: true
+
+  # ---------------------------------------------------------------------------
+  # debug — Prints telemetry to stdout for local troubleshooting.
+  # Set verbosity to "detailed" to see full attribute payloads.
+  # ---------------------------------------------------------------------------
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    # Logs from the plain-text application log file → OpenShift
+    logs/filelog:
+      receivers: [filelog]
+      exporters: [otlp]
+
+    # Logs from OTLP JSON file → OpenShift
+    logs/otlpjson:
+      receivers: [otlpjsonfile]
+      exporters: [otlp]
+
+    # System journal logs → OpenShift
+    logs/journald:
+      receivers: [journald]
+      exporters: [otlp]
+
+    # Traces received via OTLP (from generate-traces.sh) → OpenShift
+    traces:
+      receivers: [otlp]
+      exporters: [otlp]
+
+    # Debug pipeline — filelog output printed to stdout for local verification
+    logs/debug:
+      receivers: [filelog]
+      exporters: [debug]

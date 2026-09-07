@@ -1,0 +1,79 @@
+# =============================================================================
+# Podman Compose — External RHEL RHBO Demo Stack
+# =============================================================================
+# Runs three services that simulate an external RHEL host shipping telemetry
+# to an OpenShift cluster via the Red Hat Build of OpenTelemetry collector.
+#
+# For bare-metal RHEL (without Podman), you can instead:
+#   sudo dnf install opentelemetry-collector
+#   sudo cp collector-agent.yaml /etc/opentelemetry-collector/config.yaml
+#   sudo systemctl enable --now opentelemetry-collector
+#   # Then run the generator scripts directly:
+#   LOG_DIR=/var/log/demo ./scripts/generate-logs.sh &
+#   ./scripts/generate-traces.sh &
+#
+# Usage:
+#   podman-compose up -d
+#   podman-compose logs -f
+#
+# IMPORTANT: Replace CHANGEME-rhbo-collector-route.apps.cluster.example.com
+#            with your actual OpenShift Route for the RHBO collector.
+# =============================================================================
+
+version: "3"
+
+volumes:
+  shared-logs:
+
+services:
+  # ---------------------------------------------------------------------------
+  # log-generator — Writes sample app logs and OTLP JSON logs to shared volume.
+  # ---------------------------------------------------------------------------
+  log-generator:
+    image: registry.access.redhat.com/ubi9/ubi-minimal
+    container_name: log-generator
+    environment:
+      LOG_DIR: /var/log/demo
+      INTERVAL: "3"
+    volumes:
+      - ./scripts:/scripts:z
+      - shared-logs:/var/log/demo:z
+    command: ["/bin/bash", "/scripts/generate-logs.sh"]
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # collector — RHBO collector that reads logs from the shared volume, accepts
+  # traces via OTLP, and ships everything to the OpenShift cluster.
+  # ---------------------------------------------------------------------------
+  collector:
+    image: registry.redhat.io/rhosdt/opentelemetry-collector-rhel9:latest
+    container_name: collector
+    command: ["--config", "/etc/otelcol/config.yaml"]
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "https://CHANGEME-rhbo-collector-route.apps.cluster.example.com:443"
+    volumes:
+      - ./collector-agent.yaml:/etc/otelcol/config.yaml:z
+      - shared-logs:/var/log/demo:z
+      - /var/log/journal:/var/log/journal:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # trace-generator — Sends OTLP JSON traces to the collector's HTTP endpoint.
+  # Installs curl at startup since ubi-minimal does not include it by default.
+  # Depends on collector being started first.
+  # ---------------------------------------------------------------------------
+  trace-generator:
+    image: registry.access.redhat.com/ubi9/ubi-minimal
+    container_name: trace-generator
+    environment:
+      COLLECTOR_HOST: collector
+      INTERVAL: "2"
+    volumes:
+      - ./scripts:/scripts:z
+    command: ["/bin/bash", "-c", "microdnf install -y curl && /bin/bash /scripts/generate-traces.sh"]
+    depends_on:
+      - collector
+    restart: unless-stopped

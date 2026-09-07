@@ -1,0 +1,47 @@
+# =============================================================================
+# 13-tempo-monolithic.yaml
+# Deploys a TempoMonolithic instance for distributed trace storage.
+# The Tempo Operator (installed via OperatorHub) must be present on the
+# cluster before applying this manifest.
+#
+# TempoMonolithic runs all Tempo components (ingester, querier, compactor,
+# etc.) in a single container.  This is ideal for demos and small-scale
+# environments.  For production workloads, use TempoStack instead, which
+# deploys each component as a separate scalable microservice.
+#
+# Traces are persisted to MinIO via the tempo-s3 secret created in
+# 11-minio.yaml.
+# =============================================================================
+
+---
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoMonolithic
+metadata:
+  name: rhbo-tempo
+  namespace: rhbo-demo
+  labels:
+    app.kubernetes.io/part-of: rhbo-demo
+    app.kubernetes.io/component: trace-storage
+spec:
+  storage:
+    traces:
+      backend: s3
+      size: 1Gi
+      s3:
+        secret: tempo-s3        # created in 11-minio.yaml
+
+  # Enable the Jaeger UI and expose it via an OpenShift Route so traces
+  # can be queried from a browser.
+  jaegerui:
+    enabled: true
+    route:
+      enabled: true
+
+  # Multi-tenancy with OpenShift authentication.
+  # Each tenant maps to an RBAC-governed stream of trace data.
+  multitenancy:
+    enabled: true
+    mode: openshift
+    authentication:
+      - tenantName: rhbo-demo
+        tenantId: "1610b0c3-c509-4592-a256-a1871353dbfa"

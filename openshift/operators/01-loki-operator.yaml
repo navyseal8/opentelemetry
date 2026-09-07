@@ -1,0 +1,38 @@
+# 01-loki-operator.yaml
+#
+# Installs the Loki Operator for log storage and querying.
+#
+# WARNING: Do NOT use the community loki-operator from the community-operators
+# catalog. Always use the Red Hat-supported version from redhat-operators.
+#
+# This manifest creates:
+#   1. The openshift-operators-redhat Namespace (if it does not already exist).
+#   2. An OperatorGroup in that namespace.
+#   3. A Subscription to install the Loki Operator from the redhat-operators catalog.
+#
+# Apply with:
+#   oc apply -f 01-loki-operator.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-operators-redhat
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-operators-redhat
+  namespace: openshift-operators-redhat
+spec: {}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: loki-operator
+  namespace: openshift-operators-redhat
+spec:
+  channel: stable-6.6
+  name: loki-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic

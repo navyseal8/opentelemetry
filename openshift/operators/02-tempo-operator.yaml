@@ -1,0 +1,35 @@
+# 02-tempo-operator.yaml
+#
+# Installs the Tempo Operator for distributed tracing storage.
+#
+# This manifest creates:
+#   1. A dedicated Namespace for the operator: openshift-tempo-operator
+#   2. An OperatorGroup scoped to the namespace.
+#   3. A Subscription to install the operator from the redhat-operators catalog.
+#
+# Apply with:
+#   oc apply -f 02-tempo-operator.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-tempo-operator
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-tempo-operator
+  namespace: openshift-tempo-operator
+spec: {}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: tempo-product
+  namespace: openshift-tempo-operator
+spec:
+  channel: stable
+  name: tempo-product
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic

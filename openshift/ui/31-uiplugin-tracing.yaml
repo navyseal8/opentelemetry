@@ -1,0 +1,9 @@
+# UIPlugin — enables Observe > Traces in the OpenShift Console.
+# Requires a TempoStack or TempoMonolithic instance in the cluster.
+---
+apiVersion: observability.openshift.io/v1alpha1
+kind: UIPlugin
+metadata:
+  name: distributed-tracing
+spec:
+  type: DistributedTracing

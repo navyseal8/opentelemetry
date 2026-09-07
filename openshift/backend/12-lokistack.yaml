@@ -1,0 +1,43 @@
+# =============================================================================
+# 12-lokistack.yaml
+# Deploys a LokiStack instance for centralised log storage.
+# The Loki Operator (installed via OperatorHub) must be present on the cluster
+# before applying this manifest.
+#
+# Logs are persisted to MinIO via the logging-loki-s3 secret created in
+# 11-minio.yaml.
+# =============================================================================
+
+---
+apiVersion: loki.grafana.com/v1
+kind: LokiStack
+metadata:
+  name: logging-loki
+  namespace: openshift-logging
+  labels:
+    app.kubernetes.io/part-of: rhbo-demo
+    app.kubernetes.io/component: log-storage
+spec:
+  # 1x.extra-small is the smallest LokiStack size, suitable for demos and
+  # low-traffic environments.
+  size: 1x.extra-small
+
+  storage:
+    schemas:
+      - effectiveDate: "2024-10-01"
+        version: v13
+    secret:
+      name: logging-loki-s3      # created in 11-minio.yaml
+      type: s3
+
+  # ⚠️  IMPORTANT: Change storageClassName to match your cluster.
+  # Common values:
+  #   - gp2           (AWS default, older clusters)
+  #   - gp3-csi       (AWS EBS CSI driver)
+  #   - thin-csi      (vSphere)
+  #   - managed-premium (Azure)
+  #   - standard-csi  (GCP)
+  storageClassName: gp3-csi
+
+  tenants:
+    mode: openshift-logging

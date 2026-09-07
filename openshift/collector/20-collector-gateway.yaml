@@ -1,0 +1,185 @@
+# RHBO Collector Gateway — receives OTLP from the external RHEL agent,
+# applies resource enrichment, OTTL transforms (incl. PII redaction),
+# noise filtering, and tail-based trace sampling, then exports to Loki and Tempo.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collector-gateway-config
+  namespace: rhbo-demo
+  labels:
+    app: rhbo-collector-gateway
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      # 1. Resource Processor — enrich with cluster metadata
+      resource:
+        attributes:
+          - key: k8s.cluster.name
+            value: ocp-demo
+            action: upsert
+          - key: deployment.environment
+            value: staging
+            action: upsert
+          - key: team.name
+            value: platform-engineering
+            action: upsert
+          - key: rhbo.demo
+            value: "true"
+            action: insert
+
+      # 2. Transform Processor — OTTL: normalise + PII redaction
+      transform/logs:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - truncate_all(attributes, 500)
+              - set(severity_text, ConvertCase(severity_text, "upper"))
+              - set(attributes["processed_by"], "rhbo-gateway")
+              # PII Redaction via OTTL replace_pattern
+              - replace_pattern(body, "\\b[3-6]\\d{3}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b", "****")
+              - replace_pattern(body, "\\b\\d{3}-\\d{2}-\\d{4}\\b", "****")
+              - replace_pattern(body, "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b", "****")
+              - replace_pattern(body, "\\bsk-[A-Za-z0-9]{10,}\\b", "****")
+              - replace_pattern(body, "\\beyJ[A-Za-z0-9_-]+\\.[\\w-]+\\b", "****")
+
+      transform/traces:
+        error_mode: ignore
+        trace_statements:
+          - context: span
+            statements:
+              - set(attributes["processed_by"], "rhbo-gateway")
+              # Redact PII in span attributes
+              - replace_pattern(attributes["user.email"], ".*", "****")
+              - replace_pattern(attributes["user.credit_card"], ".*", "****")
+              - replace_pattern(attributes["user.ssn"], ".*", "****")
+
+      # 3. Filter Processor — drop noise
+      filter:
+        error_mode: ignore
+        logs:
+          log_record:
+            - 'severity_number < 9'
+            - 'IsMatch(body, "(?i)(health|healthz|ready|readiness|liveness)")'
+
+      # 4. Tail Sampling Processor — intelligent trace retention
+      tail_sampling:
+        decision_wait: 10s
+        num_traces: 1000
+        expected_new_traces_per_sec: 10
+        policies:
+          - name: keep-errors
+            type: status_code
+            status_code:
+              status_codes: [ERROR]
+          - name: keep-slow
+            type: latency
+            latency:
+              threshold_ms: 1000
+          - name: sample-rest
+            type: probabilistic
+            probabilistic:
+              sampling_percentage: 10
+
+    exporters:
+      otlphttp/loki:
+        endpoint: https://logging-loki-gateway-http.openshift-logging.svc:8080/api/logs/v1/application
+        tls:
+          insecure_skip_verify: true
+        headers:
+          X-Scope-OrgID: application
+
+      otlp/tempo:
+        endpoint: rhbo-tempo-distributor.rhbo-demo.svc:4317
+        tls:
+          insecure: true
+
+      debug:
+        verbosity: detailed
+
+    service:
+      telemetry:
+        logs:
+          level: info
+      pipelines:
+        logs:
+          receivers: [otlp]
+          processors: [resource, transform/logs, filter]
+          exporters: [otlphttp/loki, debug]
+        traces:
+          receivers: [otlp]
+          processors: [resource, transform/traces, tail_sampling]
+          exporters: [otlp/tempo, debug]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rhbo-collector-gateway
+  namespace: rhbo-demo
+  labels:
+    app: rhbo-collector-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rhbo-collector-gateway
+  template:
+    metadata:
+      labels:
+        app: rhbo-collector-gateway
+    spec:
+      containers:
+        - name: collector
+          image: registry.redhat.io/rhosdt/opentelemetry-collector-rhel9:latest
+          args: ["--config", "/etc/otelcol/config.yaml"]
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: collector-gateway-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rhbo-collector-gateway
+  namespace: rhbo-demo
+  labels:
+    app: rhbo-collector-gateway
+spec:
+  selector:
+    app: rhbo-collector-gateway
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+      protocol: TCP

@@ -1,0 +1,25 @@
+# 03-coo-operator.yaml
+#
+# Installs the Cluster Observability Operator (COO).
+#
+# COO installs into openshift-operators which already has a pre-existing
+# OperatorGroup. No additional namespace or OperatorGroup configuration is
+# required.
+#
+# This manifest creates:
+#   1. A Subscription to install the operator from the redhat-operators catalog.
+#
+# Apply with:
+#   oc apply -f 03-coo-operator.yaml
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: cluster-observability-operator
+  namespace: openshift-operators
+spec:
+  channel: development
+  name: cluster-observability-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic

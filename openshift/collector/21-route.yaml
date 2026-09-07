@@ -1,0 +1,20 @@
+# Route — exposes the collector's OTLP HTTP port (4318) for external ingestion.
+# The external RHEL agent targets this Route's hostname as its OTLP endpoint.
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: rhbo-collector-otlp
+  namespace: rhbo-demo
+  labels:
+    app: rhbo-collector-gateway
+spec:
+  port:
+    targetPort: otlp-http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  to:
+    kind: Service
+    name: rhbo-collector-gateway
+    weight: 100

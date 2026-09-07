@@ -1,0 +1,36 @@
+# =============================================================================
+# 10-namespace.yaml
+# Creates the namespaces required by the RHBO (Red Hat Build of OpenTelemetry)
+# demo stack:
+#   - rhbo-demo:          application workloads, TempoMonolithic, collectors
+#   - openshift-logging:  LokiStack and shared MinIO object storage
+# =============================================================================
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rhbo-demo
+  labels:
+    app.kubernetes.io/part-of: rhbo-demo
+  annotations:
+    # Describes the purpose of this namespace
+    openshift.io/description: >-
+      Namespace for the Red Hat Build of OpenTelemetry (RHBO) demo.
+      Contains application workloads, TempoMonolithic for distributed tracing,
+      and OpenTelemetry collectors.
+
+---
+# openshift-logging is the canonical namespace for the Loki Operator and
+# LokiStack on OpenShift. Creating it explicitly ensures it exists before
+# any resources are applied.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-logging
+  labels:
+    app.kubernetes.io/part-of: rhbo-demo
+  annotations:
+    openshift.io/description: >-
+      Namespace for LokiStack (log storage) and the shared MinIO instance
+      used as S3-compatible object storage for both Loki and Tempo.

@@ -1,42 +1,134 @@
-# RHBO Processor & Receiver Demo — OpenShift
+# RHBO External-to-OpenShift Observability Demo
 
-A minimal, self-contained demo showcasing **Red Hat Build of OpenTelemetry (RHBO)** processor and receiver capabilities on **OpenShift**.
+A two-tier demo showcasing **Red Hat Build of OpenTelemetry (RHBO)** collecting telemetry from an external RHEL host, processing it with 4 processors, and storing it in OpenShift's Loki and Tempo backends — visible through the OpenShift Console.
 
-## What This Demo Shows
+## Architecture
 
-### Receivers (how telemetry gets in)
+```mermaid
+flowchart LR
+  subgraph rhel ["External RHEL Host (Podman or RPM)"]
+    direction TB
+    logGen["Log Generator"]
+    traceGen["Trace Generator"]
 
-| Receiver | What it does | Data source in this demo |
-|---|---|---|
-| **filelogreceiver** | Tails plain-text log files | Simulated microservice logs in a shared `emptyDir` volume |
-| **otlpjsonfilereceiver** | Reads OTLP JSON from files | Structured OTLP log records in a shared `emptyDir` volume |
-| **journaldreceiver** | Reads systemd journal | Node journal via DaemonSet with host path mount |
+    subgraph agent ["RHBO Collector Agent"]
+      direction TB
 
-### Processors (how telemetry gets transformed)
+      subgraph receivers ["Receivers"]
+        direction TB
+        R1["filelogreceiver<br/>Tails app.log"]
+        R2["otlpjsonfilereceiver<br/>Reads OTLP JSON lines"]
+        R3["journaldreceiver<br/>Reads systemd journal"]
+        R4["otlpreceiver<br/>gRPC + HTTP for traces"]
+      end
+    end
 
-The processors run in this order on every pipeline:
+    logGen -->|"writes app.log<br/>+ otlp-logs.jsonl"| R1
+    logGen --> R2
+    traceGen -->|"POST /v1/traces"| R4
+  end
 
+  subgraph ocp ["OpenShift Cluster"]
+    subgraph gateway ["RHBO Collector Gateway"]
+      direction TB
+      otlpRx["otlpreceiver<br/>(gRPC 4317 + HTTP 4318)"]
+
+      subgraph processors ["Processors"]
+        direction TB
+        P1["resourceprocessor<br/>Enrich: cluster, env, team"]
+        P2["transformprocessor<br/>OTTL: normalise severity,<br/>PII redaction via replace_pattern"]
+        P3["filterprocessor<br/>Drop DEBUG + health checks"]
+        P4["tail_sampling<br/>Keep errors + slow traces,<br/>sample 10% of rest"]
+      end
+
+      lokiExp["otlphttpexporter → Loki"]
+      tempoExp["otlpexporter → Tempo"]
+    end
+
+    otlpRx --> P1
+    P1 --> P2
+    P2 -->|"logs"| P3
+    P2 -->|"traces"| P4
+    P3 --> lokiExp
+    P4 --> tempoExp
+
+    lokiExp --> loki["LokiStack<br/>(openshift-logging)"]
+    tempoExp --> tempo["TempoMonolithic<br/>(rhbo-demo)"]
+
+    subgraph coo ["COO UI Plugins"]
+      direction TB
+      logsUI["Observe > Logs"]
+      tracesUI["Observe > Traces"]
+    end
+
+    loki --> logsUI
+    tempo --> tracesUI
+  end
+
+  agent -->|"OTLP/gRPC over<br/>TLS Route"| otlpRx
 ```
-receiver → resourceprocessor → attributesprocessor → transformprocessor → filterprocessor → debug exporter
-```
 
-| # | Processor | Demo behaviour | Why it matters |
+## Component Summary
+
+### Receivers (external RHEL agent)
+
+These receivers demonstrate how RHBO can ingest telemetry from diverse external sources.
+
+| Receiver | Signal | What it does | Data source in this demo |
 |---|---|---|---|
-| 1 | **resourceprocessor** | Adds `deployment.environment=staging`, `team.name=platform-engineering`, `k8s.cluster.name=ocp-demo` | Consistent metadata across all signals without app changes |
-| 2 | **attributesprocessor** | Stamps `processed_by=rhbo-attributes-processor`, deletes temporary parsing attributes | Manipulate log-record attributes — insert, update, delete, hash |
-| 3 | **transformprocessor** | Uppercases severity text, truncates long attributes, **redacts PII** (credit cards, SSNs, emails, API keys, JWTs) via OTTL `replace_pattern` | Reshape and sanitise telemetry in-flight using OTTL — no code changes needed |
-| 4 | **filterprocessor** | Drops `DEBUG`-level logs and health-check probes (`/healthz`, `/ready`) | Reduce noise and storage costs |
+| **filelogreceiver** | Logs | Tails plain-text log files line-by-line | `app.log` — simulated microservice logs with PII |
+| **otlpjsonfilereceiver** | Logs | Reads OTLP-formatted JSON log records from files | `otlp-logs.jsonl` — structured OTLP log records with PII |
+| **journaldreceiver** | Logs | Reads from the systemd journal | Host systemd journal (sshd, crond, systemd units) |
+| **otlpreceiver** | Traces | Accepts OTLP gRPC/HTTP from instrumented apps | Trace generator script simulating a web application |
+
+### Processors (OpenShift collector gateway)
+
+These processors run on the OpenShift RHBO collector, transforming telemetry before it reaches storage.
+
+| # | Processor | Signal | Demo behaviour | Why it matters |
+|---|---|---|---|---|
+| 1 | **resourceprocessor** | Logs + Traces | Adds `k8s.cluster.name=ocp-demo`, `deployment.environment=staging`, `team.name=platform-engineering` | Consistent metadata enrichment across all signals without app changes |
+| 2 | **transformprocessor** | Logs + Traces | **Logs**: uppercases severity, truncates attributes, **redacts PII** (credit cards, SSNs, emails, API keys, JWTs) via OTTL `replace_pattern`. **Traces**: redacts PII from span attributes | OTTL-powered data reshaping and compliance-ready PII scrubbing — no code changes needed |
+| 3 | **filterprocessor** | Logs | Drops `DEBUG`-level logs and health-check probes (`/healthz`, `/ready`) | Reduce storage costs and improve signal-to-noise ratio |
+| 4 | **tail_sampling** | Traces | Keeps all `ERROR` traces, keeps traces slower than 1s, probabilistically samples 10% of the rest | Intelligent trace retention — focus on what matters, reduce storage by ~70% |
+
+### Backends (OpenShift)
+
+| Component | Purpose | Namespace |
+|---|---|---|
+| **LokiStack** | Log storage and querying | `openshift-logging` |
+| **TempoMonolithic** | Trace storage and querying | `rhbo-demo` |
+| **MinIO** | S3-compatible object storage (demo only) | `openshift-logging` |
+| **COO Logging UIPlugin** | Observe > Logs in OpenShift Console (`otel` schema) | cluster-scoped |
+| **COO Tracing UIPlugin** | Observe > Traces in OpenShift Console | cluster-scoped |
+
+### Operators Installed
+
+| Operator | Subscription | Namespace | Channel |
+|---|---|---|---|
+| Red Hat build of OpenTelemetry | `opentelemetry-product` | `openshift-opentelemetry-operator` | `stable` |
+| Loki Operator | `loki-operator` | `openshift-operators-redhat` | `stable-6.6` |
+| Tempo Operator | `tempo-product` | `openshift-tempo-operator` | `stable` |
+| Cluster Observability Operator | `cluster-observability-operator` | `openshift-operators` | `development` |
+
+---
+
+## Prerequisites
+
+### OpenShift Cluster
+- OpenShift 4.14+ with `oc` CLI authenticated as `cluster-admin`
+- A default `StorageClass` (for MinIO PVC — adjust `storageClassName` in LokiStack if needed)
+
+### External RHEL Host
+- RHEL 9 (or Fedora/CentOS Stream 9) with Podman installed
+- **OR** bare-metal with `dnf install opentelemetry-collector` for RPM-based deployment
+- Network access to the OpenShift cluster (HTTPS to the collector Route)
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-- OpenShift 4.x cluster with `oc` CLI authenticated (`oc login`)
-- `cluster-admin` role (needed to install the operator and grant SCC)
-
-### One-Command Deploy
+### Step 1: Deploy OpenShift Backend
 
 ```bash
 cd openshift/
@@ -44,186 +136,216 @@ cd openshift/
 ```
 
 This will:
+1. Install all 4 operators (RHBO, Loki, Tempo, COO) and wait for each CSV to succeed
+2. Deploy MinIO object storage and create S3 buckets
+3. Deploy LokiStack and TempoMonolithic
+4. Deploy the RHBO collector gateway with OTLP receiver + 4 processors
+5. Create a TLS Route for external OTLP ingestion
+6. Enable COO UI plugins for Observe > Logs and Observe > Traces
 
-1. **Install the RHBO operator** — creates the `openshift-opentelemetry-operator` namespace, OperatorGroup, and Subscription, then waits for the CSV to reach `Succeeded`
-2. **Create the demo namespace** (`rhbo-demo`) and ConfigMaps
-3. **Deploy a sidecar Pod** with two containers sharing an `emptyDir` volume:
-   - **log-generator** — writes sample logs (with PII) to the shared volume
-   - **otel-collector** — RHBO collector reading from that volume, processing, and printing to stdout
+The script prints the Route URL at the end — you'll need it for the external agent.
 
-### Deploy Variations
+### Step 2: Start External Agent
 
-```bash
-# Install only the operator (no demo workloads)
-./deploy.sh --operator-only
-
-# Deploy demo but skip operator install (if already installed)
-./deploy.sh --skip-operator
-
-# Use the OpenTelemetryCollector CR instead of a raw Deployment
-./deploy.sh --use-cr
-
-# Also deploy the per-node journald DaemonSet
-./deploy.sh --journald
-
-# Combine flags
-./deploy.sh --use-cr --journald
-```
-
-### Operator Install Details
-
-The `00-operator-install.yaml` manifest follows the [official Red Hat documentation](https://docs.redhat.com/en/documentation/red_hat_build_of_opentelemetry/3.9/html/installing_red_hat_build_of_opentelemetry/install-otel) and creates:
-
-| Resource | Namespace | Purpose |
-|---|---|---|
-| `Project` | `openshift-opentelemetry-operator` | Operator namespace with cluster monitoring enabled |
-| `OperatorGroup` | `openshift-opentelemetry-operator` | All-namespaces install scope |
-| `Subscription` | `openshift-opentelemetry-operator` | Subscribes to `opentelemetry-product` on the `stable` channel from `redhat-operators` |
-
-The deploy script waits for OLM to assign a CSV and for the CSV to reach `Succeeded` before proceeding.
-
-### Watch Processor Effects
+#### Option A: Podman (recommended for demo)
 
 ```bash
-# Follow the collector output — see processed, filtered, redacted logs
-oc logs -f deployment/rhbo-demo -c otel-collector -n rhbo-demo
+cd external/
 
-# Compare with the raw input (PII visible, debug logs present)
-oc logs -f deployment/rhbo-demo -c log-generator -n rhbo-demo
+# Set the OpenShift Route URL from Step 1
+export OTEL_EXPORTER_OTLP_ENDPOINT=https://<route-from-step-1>
 
-# Journald collector (if deployed)
-oc logs -f daemonset/rhbo-journald-collector -n rhbo-demo
+# Edit podman-compose.yaml to set the OTEL_EXPORTER_OTLP_ENDPOINT
+# Then start:
+podman-compose up
 ```
 
-You will see:
-
-1. **Resource attributes added** — every log has `deployment.environment`, `team.name`, `k8s.cluster.name`
-2. **Attributes cleaned** — `processed_by: rhbo-attributes-processor` added, temporary parse attributes removed
-3. **Transform + PII redaction** — severity uppercased, credit cards/SSNs/emails/API keys replaced with `****`
-4. **Filtered logs** — no DEBUG-level or health-check logs appear
-
-### Teardown
+#### Option B: RHEL RPM (bare-metal)
 
 ```bash
-# Remove demo namespace only (keeps operator installed)
-./openshift/deploy.sh --teardown
+# Install the RHBO collector
+sudo dnf install -y opentelemetry-collector
 
-# Remove everything including the operator
-./openshift/deploy.sh --teardown-all
+# Copy the config
+sudo cp external/collector-agent.yaml /etc/opentelemetry-collector/config.yaml
+
+# Set the endpoint
+sudo systemctl set-environment OTEL_EXPORTER_OTLP_ENDPOINT=https://<route-from-step-1>
+
+# Start the service
+sudo systemctl enable --now opentelemetry-collector.service
+
+# Start the log/trace generators
+export LOG_DIR=/var/log/demo && mkdir -p $LOG_DIR
+./external/scripts/generate-logs.sh &
+./external/scripts/generate-traces.sh &
 ```
+
+### Step 3: Verify
+
+```bash
+# Watch the OpenShift collector processing logs
+oc logs -f deployment/rhbo-collector-gateway -n rhbo-demo
+
+# Open the OpenShift Console:
+#   Observe > Logs   — see filtered, PII-redacted logs
+#   Observe > Traces — see tail-sampled traces (errors + slow requests)
+```
+
+---
+
+## What to Look For
+
+### In the Collector Logs (`oc logs`)
+
+1. **Resource enrichment** — every log/trace has `k8s.cluster.name`, `deployment.environment`, `team.name`
+2. **PII redaction** — credit cards (`4111-1111-1111-1111`), SSNs (`123-45-6789`), emails replaced with `****`
+3. **Filtered out** — no DEBUG-level logs, no `/healthz` or `/ready` probes
+4. **Tail sampling** — only error traces, slow traces (>1s), and ~10% of normal traces retained
+
+### In OpenShift Console > Observe > Logs
+
+- Query by `deployment.environment = staging`
+- Verify PII is scrubbed — search for email patterns, you should only see `****`
+- No DEBUG or health-check logs present
+
+### In OpenShift Console > Observe > Traces
+
+- Select the `rhbo-tempo` Tempo instance
+- Error traces are always present (red status)
+- Slow traces (>1s) are always present
+- Only ~10% of fast/normal traces are retained
 
 ---
 
 ## Project Structure
 
 ```
-├── data/
-│   ├── app.log                              # Sample app logs (contains PII)
-│   └── otlp-logs.jsonl                      # Sample OTLP JSON logs (contains PII)
-├── scripts/
-│   └── generate-logs.sh                     # Continuous log generator
-├── openshift/
-│   ├── 00-operator-install.yaml             # RHBO operator (Project + OperatorGroup + Subscription)
-│   ├── 01-namespace.yaml                    # Namespace: rhbo-demo
-│   ├── 02-configmap-sample-data.yaml        # Seed log data
-│   ├── 03-configmap-log-generator.yaml      # Log generator script
-│   ├── 04-configmap-collector.yaml          # Collector config (filelog + otlpjson)
-│   ├── 05-deployment-demo.yaml              # Sidecar Deployment (generator + collector)
-│   ├── 06-opentelemetrycollector-cr.yaml    # Operator CR (alternative to 05)
-│   ├── 07-daemonset-journald.yaml           # Journald DaemonSet + config
-│   └── deploy.sh                            # One-command deploy script
-├── otel-collector-config.yaml               # Standalone config (with journald)
-├── otel-collector-config-no-journald.yaml   # Standalone config (without journald)
-├── docker-compose.yaml                      # Docker Compose alternative
-├── Dockerfile.log-generator                 # Docker build for log generator
-└── README.md                                # This file
+├── external/                                 # External RHEL host
+│   ├── collector-agent.yaml                  # RHBO agent config (4 receivers, OTLP export)
+│   ├── podman-compose.yaml                   # Podman Compose: log-gen + trace-gen + collector
+│   ├── data/
+│   │   ├── app.log                           # Pre-seeded app logs with PII
+│   │   └── otlp-logs.jsonl                   # Pre-seeded OTLP JSON logs with PII
+│   └── scripts/
+│       ├── generate-logs.sh                  # Continuous log generator (bash)
+│       └── generate-traces.sh                # Continuous trace generator (curl + OTLP JSON)
+│
+├── openshift/                                # OpenShift backend
+│   ├── operators/
+│   │   ├── 00-rhbo-operator.yaml             # RHBO Operator install
+│   │   ├── 01-loki-operator.yaml             # Loki Operator install
+│   │   ├── 02-tempo-operator.yaml            # Tempo Operator install
+│   │   └── 03-coo-operator.yaml              # COO install
+│   ├── backend/
+│   │   ├── 10-namespace.yaml                 # rhbo-demo + openshift-logging namespaces
+│   │   ├── 11-minio.yaml                     # MinIO (S3 object storage for demo)
+│   │   ├── 12-lokistack.yaml                 # LokiStack CR
+│   │   └── 13-tempo-monolithic.yaml          # TempoMonolithic CR
+│   ├── collector/
+│   │   ├── 20-collector-gateway.yaml         # RHBO collector: OTLP → processors → Loki/Tempo
+│   │   └── 21-route.yaml                     # TLS Route for external OTLP ingestion
+│   ├── ui/
+│   │   ├── 30-uiplugin-logging.yaml          # COO Logging UI (Observe > Logs)
+│   │   └── 31-uiplugin-tracing.yaml          # COO Tracing UI (Observe > Traces)
+│   └── deploy.sh                             # One-command phased deploy
+│
+└── README.md                                 # This file
 ```
 
-## Architecture
+---
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  OpenShift Cluster                                                      │
-│                                                                         │
-│  ┌─────────────────── Pod: rhbo-demo ──────────────────────────┐       │
-│  │                                                              │       │
-│  │  ┌──────────────┐   emptyDir    ┌────────────────────────┐  │       │
-│  │  │ log-generator│──/var/log/──▶│ otel-collector (RHBO)  │  │       │
-│  │  │              │   demo/       │                        │  │       │
-│  │  │ writes:      │              │ filelog receiver        │  │       │
-│  │  │  app.log     │              │ otlpjsonfile receiver   │  │       │
-│  │  │  otlp.jsonl  │              │         │               │  │       │
-│  │  └──────────────┘              │         ▼               │  │       │
-│  │                                │ ┌──────────────────┐    │  │       │
-│  │                                │ │ 1. resource      │    │  │       │
-│  │                                │ │ 2. transform     │    │  │       │
-│  │                                │ │ 3. filter        │    │  │       │
-│  │                                │ │ 4. redaction     │    │  │       │
-│  │                                │ └────────┬─────────┘    │  │       │
-│  │                                │          ▼              │  │       │
-│  │                                │   debug exporter        │  │       │
-│  │                                │   (stdout)              │  │       │
-│  │                                └────────────────────────┘  │       │
-│  └──────────────────────────────────────────────────────────────┘       │
-│                                                                         │
-│  ┌─────────── DaemonSet: rhbo-journald-collector ──────────────┐       │
-│  │  hostPath: /var/log/journal  →  journald receiver           │       │
-│  │  Same 4 processors → debug exporter                         │       │
-│  └─────────────────────────────────────────────────────────────┘       │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+## RHBO Deployment Models
+
+This demo showcases **both** supported RHBO deployment models:
+
+| Deployment | Where | How | What it proves |
+|---|---|---|---|
+| **RHEL RPM agent** | External RHEL host | `dnf install opentelemetry-collector` | RHBO works standalone on RHEL — collects from files, journal, and OTLP |
+| **OpenShift Operator** | OpenShift cluster | RHBO Operator + raw Deployment | RHBO works on OpenShift — processes, enriches, and routes telemetry to Loki/Tempo |
+
+Both are **Red Hat supported** with the same collector binary and the same [component manifest](https://github.com/os-observability/redhat-opentelemetry-collector/blob/main/manifest.yaml).
+
+---
 
 ## Demo Talk Track
 
 ### Opening
-> "Let me show you how RHBO on OpenShift can transform, filter, and secure your telemetry data without changing a single line of application code."
+
+> "Today I'll show you how Red Hat Build of OpenTelemetry handles the full telemetry lifecycle — from collection on external RHEL hosts, through intelligent processing, to storage and visualization on OpenShift."
 
 ### Receiver Story
-> "We have three different log sources feeding into the RHBO collector:
-> - A **file log receiver** tailing a standard application log from a shared volume
-> - An **OTLP JSON file receiver** consuming structured telemetry exports
-> - A **journald receiver** running as a DaemonSet, pulling directly from each node's systemd journal
+
+> "On our external RHEL host, the RHBO collector agent — installed via a simple `dnf install` — is reading from three different source types:
 >
-> All three feed into the same processing pipeline — the same four processors."
+> 1. A **file log receiver** tailing a standard application log — the kind you'd find on any Linux server
+> 2. An **OTLP JSON file receiver** consuming structured telemetry exports written by applications
+> 3. A **journald receiver** reading directly from the systemd journal — capturing system-level events like SSH logins
+> 4. An **OTLP receiver** accepting traces from instrumented applications
+>
+> All of this telemetry is shipped over a TLS-encrypted OTLP connection to our OpenShift cluster."
 
 ### Processor Walkthrough
 
+> "On the OpenShift side, the RHBO collector gateway applies four processors before any data touches storage."
+
 **1. Resource Processor**
-> "First, the resource processor enriches every single log with deployment metadata — environment, team ownership, cluster name. This happens automatically at the collector level; no application instrumentation changes needed."
+> "Every log and trace is enriched with cluster name, deployment environment, and team ownership. This metadata is injected at the collector level — zero changes to any application code."
 
-**2. Attributes Processor**
-> "Next, the attributes processor manipulates log record attributes directly. It stamps a processing marker, and cleans up temporary attributes left over from parsing. You can insert, update, delete, or even hash attribute values — great for normalisation and housekeeping."
+**2. Transform Processor (with PII Redaction)**
+> "The transform processor uses OTTL — the OpenTelemetry Transformation Language — to do two things. First, it normalises data: uppercasing severity text, truncating oversized attributes. Second, and critically, it **redacts all PII**. Watch — credit card numbers, Social Security Numbers, email addresses, API keys — all replaced with `****` using regex-based `replace_pattern` rules. This data never reaches Loki or Tempo. Compliance-ready telemetry, enforced at the infrastructure level."
 
-**3. Transform Processor**
-> "The transform processor is where OTTL really shines. We normalise severity text to uppercase, truncate oversized attributes, and — crucially — **redact PII in-flight**. Credit card numbers, Social Security Numbers, email addresses, API keys, JWT tokens — all replaced with `****` using `replace_pattern` before the data leaves the collector. Compliance-ready telemetry, zero application changes."
+**3. Filter Processor**
+> "The filter processor eliminates noise. All those DEBUG-level health-check logs — `/healthz`, `/ready` — that flood your observability backend? Dropped before storage. This directly reduces your Loki storage costs and improves the signal-to-noise ratio for operators."
 
-**4. Filter Processor**
-> "Finally, the filter processor drops the noise. All those DEBUG health-check logs and readiness probes that flood your observability backend? Gone. We keep only actionable INFO, WARN, and ERROR logs. This directly reduces storage costs and improves signal-to-noise ratio."
+**4. Tail Sampling Processor**
+> "For traces, we use tail sampling — which evaluates the complete trace before deciding whether to keep it. Our policy: always keep error traces, always keep slow traces over 1 second, and probabilistically sample just 10% of everything else. The result? You keep 100% of the interesting traces while reducing storage by roughly 70%."
+
+### Backend Story
+
+> "The processed data flows into two Red Hat-supported backends:
+> - **Loki** for logs — deployed via the Loki Operator with a LokiStack custom resource
+> - **Tempo** for traces — deployed via the Tempo Operator as a TempoMonolithic instance
+>
+> Both use MinIO for S3-compatible storage in this demo, but you'd swap in AWS S3, Azure Blob, or ODF in production."
+
+### Console Visualization
+
+> "And finally, the Cluster Observability Operator gives us native OpenShift Console integration. Under **Observe > Logs**, you can query and filter the processed logs — notice there's no PII anywhere, no debug noise. Under **Observe > Traces**, you can see the sampled traces — mostly errors and slow requests, exactly what your SRE team needs."
 
 ### Closing
-> "Four processors, three receivers, zero application changes, all running on OpenShift with a Red Hat supported, enterprise-grade OpenTelemetry distribution."
+
+> "Four receivers, four processors, two backends, native console integration — all powered by Red Hat Build of OpenTelemetry. Supported on RHEL for edge collection, supported on OpenShift for central processing. One collector binary, two deployment models, complete observability."
 
 ---
 
 ## Customisation
 
-### Use the RHBO operator image
+### Swap MinIO for production storage
 
-The sidecar deployment (`04-deployment-demo.yaml`) uses:
+Replace the MinIO secrets with your real S3/Azure/GCS credentials. Update `storageClassName` in the LokiStack CR to match your cluster.
 
-```yaml
-image: registry.redhat.io/rhosdt/opentelemetry-collector-rhel9:latest
-```
+### Add more processor rules
 
-Replace with the specific version tag for your environment if needed.
+Edit `openshift/collector/20-collector-gateway.yaml` to add more OTTL transform rules, filter conditions, or tail sampling policies.
 
-### Add an observability backend
+### Use OpenTelemetryCollector CR
 
-Replace or augment `debugexporter` with `otlpexporter` or `otlphttpexporter` to send data to:
-- Red Hat OpenShift distributed tracing (Tempo)
-- Red Hat OpenShift Logging (Loki)
-- Any OTLP-compatible backend
+Instead of the raw Deployment in `20-collector-gateway.yaml`, you can use the operator-managed `OpenTelemetryCollector` CR for automatic upgrades and lifecycle management.
 
 ### Supported components
 
-See the full [RHBO manifest](https://github.com/os-observability/redhat-opentelemetry-collector/blob/main/manifest.yaml) for all supported receivers, processors, exporters, and connectors.
+See the full [RHBO manifest](https://github.com/os-observability/redhat-opentelemetry-collector/blob/main/manifest.yaml) for all supported receivers, processors, exporters, connectors, and extensions.
+
+---
+
+## Teardown
+
+```bash
+# Remove demo workloads only (keeps operators for reuse)
+cd openshift/
+./deploy.sh --teardown
+
+# Remove everything including all 4 operators
+./deploy.sh --teardown-all
+```

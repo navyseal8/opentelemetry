@@ -1,0 +1,10 @@
+2026-09-07T04:00:01.123Z INFO [payment-service] Processing payment for order #ORD-29841 — card 4111-1111-1111-1111 exp 12/28 amount $249.99
+2026-09-07T04:00:02.456Z DEBUG [user-service] Fetching profile for user_id=10042 email=alice.johnson@example.com ssn=123-45-6789
+2026-09-07T04:00:03.789Z INFO [api-gateway] GET /healthz 200 OK — latency 2ms
+2026-09-07T04:00:05.012Z WARN [inventory-service] Stock below threshold for SKU-8832 — notifying ops team at ops-alerts@example.com
+2026-09-07T04:00:06.345Z ERROR [payment-service] Payment declined for card 5500-0000-0000-0004 — reason: insufficient_funds — customer ssn=987-65-4321
+2026-09-07T04:00:07.678Z INFO [auth-service] Token issued for user jane.doe@example.com using API key sk-prod-abc123xyz789
+2026-09-07T04:00:08.901Z DEBUG [order-service] Creating order payload: {"customer_email":"bob.smith@example.com","card":"4222-2222-2222-2222","ssn":"456-78-9012"}
+2026-09-07T04:00:09.234Z INFO [api-gateway] GET /ready 200 OK — latency 1ms
+2026-09-07T04:00:10.567Z ERROR [notification-service] Failed to send SMS to +1-555-867-5309 for user ssn=321-54-9876 — provider timeout after 30s
+2026-09-07T04:00:11.890Z INFO [audit-service] Admin action: user carlos@example.com rotated API key from sk-prod-old999dead000 to sk-prod-new888live111
