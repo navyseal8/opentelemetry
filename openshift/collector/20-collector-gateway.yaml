@@ -39,6 +39,30 @@ data:
           - key: rhbo.demo
             value: "true"
             action: insert
+          # Required by Loki OTLP ingestion for tenant + otel/viaq schema queries
+          - key: log_type
+            value: application
+            action: upsert
+          - key: openshift.log_type
+            value: application
+            action: upsert
+          # OTel semantic conventions (for otel schema in Console)
+          - key: k8s.namespace.name
+            value: rhbo-demo
+            action: upsert
+          - key: k8s.pod.name
+            value: external-agent
+            action: upsert
+          - key: service.name
+            value: rhbo-external-agent
+            action: upsert
+          # ViaQ-style names (for viaq schema in Console)
+          - key: kubernetes.namespace_name
+            value: rhbo-demo
+            action: upsert
+          - key: kubernetes.pod_name
+            value: external-agent
+            action: upsert
 
       # 2. Transform Processor — OTTL: normalise + PII redaction
       transform/logs:
@@ -49,6 +73,7 @@ data:
               - truncate_all(attributes, 500)
               - set(severity_text, ConvertCase(severity_text, "upper"))
               - set(attributes["processed_by"], "rhbo-gateway")
+              - set(attributes["level"], ConvertCase(severity_text, "lower"))
               # PII Redaction via OTTL replace_pattern
               - replace_pattern(body, "\\b[3-6]\\d{3}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b", "****")
               - replace_pattern(body, "\\b\\d{3}-\\d{2}-\\d{4}\\b", "****")
@@ -96,14 +121,15 @@ data:
 
     exporters:
       otlphttp/loki:
-        endpoint: https://logging-loki-gateway-http.openshift-logging.svc:8080/api/logs/v1/application
+        endpoint: https://logging-loki-gateway-http.openshift-logging.svc.cluster.local:8080/api/logs/v1/application/otlp
+        encoding: json
         tls:
-          insecure_skip_verify: true
-        headers:
-          X-Scope-OrgID: application
+          ca_file: "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
+        auth:
+          authenticator: bearertokenauth
 
       otlp/tempo:
-        endpoint: tempo-rhbo-tempo-gateway.rhbo-demo.svc:8090
+        endpoint: tempo-rhbo-tempo-gateway.rhbo-demo.svc:4317
         tls:
           insecure: false
           ca_file: "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"

@@ -37,7 +37,19 @@ spec:
   #   - thin-csi      (vSphere)
   #   - managed-premium (Azure)
   #   - standard-csi  (GCP)
-  storageClassName: gp3-csi
+  storageClassName: ocs-external-storagecluster-ceph-rbd
+
+  # OTLP attribute → stream label mappings.
+  # The openshift-logging mode has defaults (k8s.pod.name, service.name, etc.)
+  # but we must add openshift.log_type so the Console otel schema can query it.
+  limits:
+    global:
+      otlp:
+        streamLabels:
+          resourceAttributes:
+            - name: "openshift.log_type"
+            - name: "kubernetes.namespace_name"
+            - name: "kubernetes.pod_name"
 
   tenants:
     mode: openshift-logging

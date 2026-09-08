@@ -1,0 +1,134 @@
+###############################################################################
+# 22-rbac.yaml
+# RBAC for the RHBO collector gateway to:
+#   - Write logs to LokiStack (application tenant)
+#   - Write traces to TempoMonolithic (rhbo-demo tenant)
+#   - Allow Console users to read traces
+#
+# Creates:
+#   1. ServiceAccount for the collector gateway
+#   2. ClusterRole + Binding: write logs to Loki application tenant
+#   3. ClusterRole + Binding: write traces to Tempo rhbo-demo tenant
+#   4. ClusterRole + Binding: read traces (for Console / Jaeger UI users)
+###############################################################################
+
+# ── 1. ServiceAccount for the collector ─────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rhbo-collector-gateway
+  namespace: rhbo-demo
+  labels:
+    app: rhbo-collector-gateway
+    app.kubernetes.io/part-of: rhbo-demo
+
+---
+# ── 2a. ClusterRole: write logs to LokiStack application tenant ────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rhbo-loki-logs-write
+rules:
+  - apiGroups:
+      - loki.grafana.com
+    resources:
+      - application
+    resourceNames:
+      - logs
+    verbs:
+      - create
+
+---
+# ── 2b. ClusterRoleBinding: collector SA → Loki write role ─────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhbo-collector-logs-write
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rhbo-loki-logs-write
+subjects:
+  - kind: ServiceAccount
+    name: rhbo-collector-gateway
+    namespace: rhbo-demo
+
+---
+# ── 3a. ClusterRole: write traces to Tempo rhbo-demo tenant ────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rhbo-tempo-traces-write
+rules:
+  - apiGroups:
+      - tempo.grafana.com
+    resources:
+      - rhbo-demo
+    resourceNames:
+      - traces
+    verbs:
+      - create
+
+---
+# ── 3b. ClusterRoleBinding: collector SA → Tempo write role ─────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhbo-collector-traces-write
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rhbo-tempo-traces-write
+subjects:
+  - kind: ServiceAccount
+    name: rhbo-collector-gateway
+    namespace: rhbo-demo
+
+---
+# ── 4a. ClusterRole: read traces for rhbo-demo tenant ──────────────────────
+# Grants Console users and Jaeger UI access to query traces.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rhbo-tempo-traces-read
+rules:
+  - apiGroups:
+      - tempo.grafana.com
+    resources:
+      - rhbo-demo
+    resourceNames:
+      - traces
+    verbs:
+      - get
+
+---
+# ── 4b. ClusterRoleBinding: all authenticated users → read traces ───────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhbo-tempo-traces-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rhbo-tempo-traces-read
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: system:authenticated
+
+---
+# ── 5. ClusterRoleBinding: all authenticated users → read application logs ──
+# The ClusterRole 'cluster-logging-application-view' is auto-created by COO.
+# This binding allows Console users to query logs in Observe > Logs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhbo-loki-application-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-logging-application-view
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: system:authenticated
