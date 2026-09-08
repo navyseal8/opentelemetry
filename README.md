@@ -384,7 +384,14 @@ Instead of the raw Deployment in `20-collector-gateway.yaml`, you can use the op
 
 ### Supported components
 
-See the full [RHBO manifest](https://github.com/os-observability/redhat-opentelemetry-collector/blob/main/manifest.yaml) for all supported receivers, processors, exporters, connectors, and extensions.
+RHBO supports a curated subset of the upstream OpenTelemetry Collector components. Not every community receiver, processor, or exporter is available in the Red Hat build.
+
+| | Manifest | Description |
+|---|---|---|
+| **Community (upstream)** | [otelcol-contrib manifest.yaml](https://github.com/open-telemetry/opentelemetry-collector-releases/blob/main/distributions/otelcol-contrib/manifest.yaml) | Full list of all receivers, processors, exporters, connectors, and extensions in the community `otelcol-contrib` distribution |
+| **Red Hat supported** | [RHBO manifest.yaml](https://github.com/os-observability/redhat-opentelemetry-collector/blob/main/manifest.yaml) | Subset of components that are included and supported in the Red Hat Build of OpenTelemetry |
+
+When planning a deployment, always check the RHBO manifest to confirm that the components you need are available. If a component exists in the community build but not in RHBO, you will need to request support or find an alternative approach (as we did with `redactionprocessor` → `transformprocessor` OTTL `replace_pattern` in this demo).
 
 ---
 
