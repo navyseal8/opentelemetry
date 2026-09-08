@@ -4,6 +4,11 @@ A two-tier demo showcasing **Red Hat Build of OpenTelemetry (RHBO)** collecting 
 
 ## Architecture
 
+> **Editable diagram**: Open [`docs/architecture.drawio`](docs/architecture.drawio) in [draw.io](https://app.diagrams.net/) (or the VS Code draw.io extension) for a polished visual diagram. Export to PNG/SVG as needed.
+
+<details>
+<summary>Text-based diagram (Mermaid — click to expand)</summary>
+
 ```mermaid
 flowchart LR
   subgraph rhel ["External RHEL Host (Podman or RPM)"]
@@ -67,6 +72,8 @@ flowchart LR
 
   agent -->|"OTLP/gRPC over<br/>TLS Route"| otlpRx
 ```
+
+</details>
 
 ## Component Summary
 
@@ -231,6 +238,9 @@ oc logs -f deployment/rhbo-collector-gateway -n rhbo-demo
 │   └── scripts/
 │       ├── generate-logs.sh                  # Continuous log generator (bash)
 │       └── generate-traces.sh                # Continuous trace generator (curl + OTLP JSON)
+│
+├── docs/
+│   └── architecture.drawio                   # Editable draw.io architecture diagram
 │
 ├── openshift/                                # OpenShift backend
 │   ├── operators/
