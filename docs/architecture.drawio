@@ -1,221 +1,172 @@
-<mxfile host="app.diagrams.net" modified="2026-09-08T05:00:00.000Z" agent="RHBO Demo" version="24.0.0" type="device">
+<mxfile host="app.diagrams.net" agent="RHBO Demo">
   <diagram name="RHBO Architecture" id="rhbo-arch">
-    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+    <mxGraphModel dx="1782" dy="1167" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1050" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- External RHEL Host Container                                -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <mxCell id="rhel" value="External RHEL Host (Podman or RPM)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=14;fontStyle=1;verticalAlign=top;align=center;spacingTop=8;arcSize=8;container=1;collapsible=0;dashed=1;dashPattern=8 4;strokeWidth=2;" vertex="1" parent="1">
-          <mxGeometry x="30" y="60" width="500" height="780" as="geometry" />
+        <mxCell id="rhel" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=15;fontStyle=1;verticalAlign=top;align=center;spacingTop=10;arcSize=8;container=1;collapsible=0;dashed=1;dashPattern=8 4;strokeWidth=2;" value="External RHEL Host (Podman or RPM)" vertex="1">
+          <mxGeometry height="920" width="560" x="30" y="60" as="geometry" />
         </mxCell>
-
-        <!-- Log Generator -->
-        <mxCell id="loggen" value="&lt;b&gt;Log Generator&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;generate-logs.sh&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;arcSize=12;shadow=1;" vertex="1" parent="rhel">
-          <mxGeometry x="30" y="50" width="200" height="60" as="geometry" />
+        <mxCell id="loggen" parent="rhel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=15;arcSize=12;shadow=1;" value="&lt;b&gt;Log Generator&lt;/b&gt;&lt;br&gt;generate-logs.sh" vertex="1">
+          <mxGeometry height="65" width="230" x="30" y="55" as="geometry" />
         </mxCell>
-
-        <!-- Trace Generator -->
-        <mxCell id="tracegen" value="&lt;b&gt;Trace Generator&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;generate-traces.sh&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;arcSize=12;shadow=1;" vertex="1" parent="rhel">
-          <mxGeometry x="270" y="50" width="200" height="60" as="geometry" />
+        <mxCell id="tracegen" parent="rhel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=15;arcSize=12;shadow=1;" value="&lt;b&gt;Trace Generator&lt;/b&gt;&lt;br&gt;generate-traces.sh" vertex="1">
+          <mxGeometry height="65" width="230" x="300" y="55" as="geometry" />
         </mxCell>
-
-        <!-- RHBO Collector Agent Container -->
-        <mxCell id="agent" value="RHBO Collector Agent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;verticalAlign=top;align=center;spacingTop=8;arcSize=8;container=1;collapsible=0;strokeWidth=2;shadow=1;" vertex="1" parent="rhel">
-          <mxGeometry x="30" y="150" width="440" height="610" as="geometry" />
+        <mxCell id="agent" parent="rhel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=15;fontStyle=1;verticalAlign=top;align=center;spacingTop=10;arcSize=8;container=1;collapsible=0;strokeWidth=2;shadow=1;" value="RHBO Collector Agent" vertex="1">
+          <mxGeometry height="720" width="500" x="30" y="165" as="geometry" />
         </mxCell>
-
-        <!-- Receivers Group -->
-        <mxCell id="rxgroup" value="Receivers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;verticalAlign=top;align=center;spacingTop=6;arcSize=8;container=1;collapsible=0;" vertex="1" parent="agent">
-          <mxGeometry x="20" y="45" width="400" height="310" as="geometry" />
+        <mxCell id="rxgroup" parent="agent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=15;fontStyle=1;verticalAlign=top;align=center;spacingTop=8;arcSize=8;container=1;collapsible=0;" value="Receivers" vertex="1">
+          <mxGeometry height="380" width="460" x="20" y="50" as="geometry" />
         </mxCell>
-
-        <mxCell id="rx1" value="&lt;b&gt;filelogreceiver&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;Tails app.log line-by-line&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="rxgroup">
-          <mxGeometry x="20" y="40" width="360" height="50" as="geometry" />
+        <mxCell id="rx1" parent="rxgroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;filelogreceiver&lt;/b&gt;&lt;br&gt;Tails app.log line-by-line" vertex="1">
+          <mxGeometry height="60" width="410" x="25" y="45" as="geometry" />
         </mxCell>
-
-        <mxCell id="rx2" value="&lt;b&gt;otlpjsonfilereceiver&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;Reads OTLP JSON log records from file&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="rxgroup">
-          <mxGeometry x="20" y="105" width="360" height="50" as="geometry" />
+        <mxCell id="rx2" parent="rxgroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;otlpjsonfilereceiver&lt;/b&gt;&lt;br&gt;Reads OTLP JSON log records from file" vertex="1">
+          <mxGeometry height="60" width="410" x="25" y="120" as="geometry" />
         </mxCell>
-
-        <mxCell id="rx3" value="&lt;b&gt;journaldreceiver&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;Reads systemd journal (sshd, crond, etc.)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="rxgroup">
-          <mxGeometry x="20" y="170" width="360" height="50" as="geometry" />
+        <mxCell id="rx3" parent="rxgroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;journaldreceiver&lt;/b&gt;&lt;br&gt;Reads systemd journal (sshd, crond, etc.)" vertex="1">
+          <mxGeometry height="60" width="410" x="25" y="195" as="geometry" />
         </mxCell>
-
-        <mxCell id="rx4" value="&lt;b&gt;otlpreceiver&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;gRPC + HTTP for traces from instrumented apps&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="rxgroup">
-          <mxGeometry x="20" y="235" width="360" height="50" as="geometry" />
+        <mxCell id="rx4" parent="rxgroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;otlpreceiver&lt;/b&gt;&lt;br&gt;gRPC + HTTP for traces from instrumented apps" vertex="1">
+          <mxGeometry height="60" width="410" x="25" y="270" as="geometry" />
         </mxCell>
-
-        <!-- OTLP Export -->
-        <mxCell id="otlpexp" value="&lt;b&gt;OTLP/HTTP Exporter&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;Sends logs + traces over TLS&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="agent">
-          <mxGeometry x="80" y="530" width="280" height="50" as="geometry" />
+        <mxCell id="otlpexp" parent="agent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;OTLP/HTTP Exporter&lt;/b&gt;&lt;br&gt;Sends logs + traces over TLS" vertex="1">
+          <mxGeometry height="60" width="320" x="90" y="630" as="geometry" />
         </mxCell>
-
-        <!-- Agent internal arrows -->
-        <mxCell id="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="agent" source="rxgroup" target="otlpexp">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="220" y="400" />
-              <mxPoint x="220" y="400" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-
-        <!-- Generator arrows -->
-        <mxCell id="g1" value="&lt;font style=&quot;font-size:10px&quot;&gt;app.log + otlp-logs.jsonl&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=1.5;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="rhel" source="loggen" target="agent">
+        <mxCell id="a1" edge="1" parent="agent" source="rxgroup" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="otlpexp">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <mxCell id="g2" value="&lt;font style=&quot;font-size:10px&quot;&gt;POST /v1/traces&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=1.5;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="rhel" source="tracegen" target="agent">
+        <mxCell id="g1" edge="1" parent="rhel" source="loggen" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=2;fontSize=15;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" target="agent" value="app.log + otlp-logs.jsonl">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- TLS Route Arrow                                             -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <mxCell id="tlsroute" value="&lt;b&gt;OTLP/HTTP over TLS Route&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;Edge-terminated HTTPS&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#CC0000;strokeWidth=3;fontSize=11;fontColor=#CC0000;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.15;entryDx=0;entryDy=0;shadow=1;jumpStyle=arc;" edge="1" parent="1" source="rhel" target="ocp">
+        <mxCell id="g2" edge="1" parent="rhel" source="tracegen" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=2;fontSize=15;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" target="agent" value="POST /v1/traces">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tlsroute" edge="1" parent="1" source="rhel" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#CC0000;strokeWidth=3;fontSize=14;fontColor=#CC0000;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.15;entryDx=0;entryDy=0;shadow=1;jumpStyle=arc;verticalAlign=middle;labelAutoRotate=1;" target="ocp" value="OTLP/HTTP over TLS Route&#xa;Edge-terminated HTTPS">
           <mxGeometry relative="1" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- OpenShift Cluster Container                                 -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <mxCell id="ocp" value="OpenShift Cluster" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEF0F2;strokeColor=#CC0000;fontColor=#CC0000;fontSize=14;fontStyle=1;verticalAlign=top;align=center;spacingTop=8;arcSize=6;container=1;collapsible=0;strokeWidth=2;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="610" y="60" width="960" height="780" as="geometry" />
+        <mxCell id="ocp" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEF0F2;strokeColor=#CC0000;fontColor=#CC0000;fontSize=15;fontStyle=1;verticalAlign=top;align=center;spacingTop=10;arcSize=6;container=1;collapsible=0;strokeWidth=2;shadow=1;" value="OpenShift Cluster" vertex="1">
+          <mxGeometry height="920" width="1120" x="680" y="60" as="geometry" />
         </mxCell>
-
-        <!-- ── RHBO Collector Gateway ────────────────────────────── -->
-        <mxCell id="gateway" value="RHBO Collector Gateway (rhbo-demo namespace)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;verticalAlign=top;align=center;spacingTop=8;arcSize=8;container=1;collapsible=0;strokeWidth=2;shadow=1;" vertex="1" parent="ocp">
-          <mxGeometry x="30" y="50" width="540" height="580" as="geometry" />
+        <mxCell id="gateway" parent="ocp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=15;fontStyle=1;verticalAlign=top;align=center;spacingTop=10;arcSize=8;container=1;collapsible=0;strokeWidth=2;shadow=1;" value="RHBO Collector Gateway (rhbo-demo namespace)" vertex="1">
+          <mxGeometry height="680" width="568.89" x="31.11" y="55" as="geometry" />
         </mxCell>
-
-        <!-- OTLP Receiver -->
-        <mxCell id="gwrx" value="&lt;b&gt;otlpreceiver&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;gRPC :4317 + HTTP :4318&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="gateway">
-          <mxGeometry x="155" y="45" width="230" height="50" as="geometry" />
+        <mxCell id="gwrx" parent="gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;otlpreceiver&lt;/b&gt;&lt;br&gt;gRPC :4317 + HTTP :4318" vertex="1">
+          <mxGeometry height="60" width="251.80377049180328" x="158.54311475409838" y="50" as="geometry" />
         </mxCell>
-
-        <!-- Processors Group -->
-        <mxCell id="procgroup" value="Processors" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;verticalAlign=top;align=center;spacingTop=6;arcSize=8;container=1;collapsible=0;" vertex="1" parent="gateway">
-          <mxGeometry x="20" y="125" width="500" height="290" as="geometry" />
+        <mxCell id="procgroup" parent="gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=15;fontStyle=1;verticalAlign=top;align=center;spacingTop=8;arcSize=8;container=1;collapsible=0;" value="Processors" vertex="1">
+          <mxGeometry height="340" width="531.585737704918" x="18.65213114754098" y="140" as="geometry" />
         </mxCell>
-
-        <mxCell id="p1" value="&lt;b&gt;① resourceprocessor&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;Enrich: cluster name, environment, team, namespace&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="procgroup">
-          <mxGeometry x="15" y="35" width="470" height="48" as="geometry" />
+        <mxCell id="p1" parent="procgroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;① resourceprocessor&lt;/b&gt;&lt;br&gt;Enrich: cluster name, environment, team, namespace" vertex="1">
+          <mxGeometry height="55" width="503.60754098360644" x="13.989098360655737" y="40" as="geometry" />
         </mxCell>
-
-        <mxCell id="p2" value="&lt;b&gt;② transformprocessor&lt;/b&gt; (OTTL)&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;Normalise severity · PII redaction via replace_pattern&lt;br&gt;(credit cards, SSNs, emails, API keys, JWTs → ****)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="procgroup">
-          <mxGeometry x="15" y="95" width="470" height="58" as="geometry" />
+        <mxCell id="p2" parent="procgroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;② transformprocessor&lt;/b&gt; (OTTL)&lt;br&gt;Normalise severity · PII redaction via replace_pattern&lt;br&gt;(credit cards, SSNs, emails, API keys, JWTs → ****)" vertex="1">
+          <mxGeometry height="70" width="503.60754098360644" x="13.989098360655737" y="110" as="geometry" />
         </mxCell>
-
-        <mxCell id="p3" value="&lt;b&gt;③ filterprocessor&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;Drop DEBUG logs + health checks (/healthz, /ready)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="procgroup">
-          <mxGeometry x="15" y="165" width="225" height="48" as="geometry" />
+        <mxCell id="p3" parent="procgroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;③ filterprocessor&lt;/b&gt;&lt;br&gt;Drop DEBUG logs + health checks&lt;br&gt;(/healthz, /ready)" vertex="1">
+          <mxGeometry height="70" width="242.47770491803277" x="13.989098360655737" y="200" as="geometry" />
         </mxCell>
-
-        <mxCell id="p4" value="&lt;b&gt;④ tail_sampling&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;Keep errors + slow &amp;gt;1s · Sample 10% rest&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="procgroup">
-          <mxGeometry x="260" y="165" width="225" height="48" as="geometry" />
+        <mxCell id="p4" parent="procgroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9673a6;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;④ tail_sampling&lt;/b&gt;&lt;br&gt;Keep errors + slow &amp;gt;1s&lt;br&gt;Sample 10% of the rest" vertex="1">
+          <mxGeometry height="70" width="242.47770491803277" x="275.1189344262295" y="200" as="geometry" />
         </mxCell>
-
-        <mxCell id="plabel1" value="&lt;font style=&quot;font-size:10px;color:#9673a6&quot;&gt;Logs pipeline&lt;/font&gt;" style="text;html=1;align=center;" vertex="1" parent="procgroup">
-          <mxGeometry x="70" y="225" width="80" height="20" as="geometry" />
+        <mxCell id="plabel1" parent="procgroup" style="text;html=1;align=center;fontSize=15;" value="&lt;font color=&quot;#9673a6&quot;&gt;Logs pipeline&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="111.9127868852459" x="74.60852459016392" y="285" as="geometry" />
         </mxCell>
-
-        <mxCell id="plabel2" value="&lt;font style=&quot;font-size:10px;color:#9673a6&quot;&gt;Traces pipeline&lt;/font&gt;" style="text;html=1;align=center;" vertex="1" parent="procgroup">
-          <mxGeometry x="315" y="225" width="90" height="20" as="geometry" />
+        <mxCell id="plabel2" parent="procgroup" style="text;html=1;align=center;fontSize=15;" value="&lt;font color=&quot;#9673a6&quot;&gt;Traces pipeline&lt;/font&gt;" vertex="1">
+          <mxGeometry height="25" width="111.9127868852459" x="335.7383606557376" y="285" as="geometry" />
         </mxCell>
-
-        <!-- Arrows: p1 → p2 -->
-        <mxCell id="pa1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=1.5;" edge="1" parent="procgroup" source="p1" target="p2">
+        <mxCell id="pa1" edge="1" parent="procgroup" source="p1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=2;" target="p2">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Exporters -->
-        <mxCell id="lokiexp" value="&lt;b&gt;otlphttp → Loki&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;bearertokenauth + JSON encoding&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="gateway">
-          <mxGeometry x="20" y="450" width="230" height="50" as="geometry" />
+        <mxCell id="lokiexp" parent="gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;otlphttp → Loki&lt;/b&gt;&lt;br&gt;bearertokenauth + JSON encoding" vertex="1">
+          <mxGeometry height="60" width="251.80377049180328" x="18.65213114754098" y="520" as="geometry" />
         </mxCell>
-
-        <mxCell id="tempoexp" value="&lt;b&gt;otlp → Tempo&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;bearertokenauth + X-Scope-OrgID&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="gateway">
-          <mxGeometry x="290" y="450" width="230" height="50" as="geometry" />
+        <mxCell id="tempoexp" parent="gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;otlp → Tempo&lt;/b&gt;&lt;br&gt;bearertokenauth + X-Scope-OrgID" vertex="1">
+          <mxGeometry height="60" width="251.80377049180328" x="298.4340983606557" y="520" as="geometry" />
         </mxCell>
-
-        <!-- Arrows: receiver → processors → exporters -->
-        <mxCell id="ga1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;strokeWidth=1.5;" edge="1" parent="gateway" source="gwrx" target="procgroup">
+        <mxCell id="ga1" edge="1" parent="gateway" source="gwrx" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;strokeWidth=2;" target="procgroup">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <mxCell id="ga2" value="&lt;font style=&quot;font-size:10px;color:#82b366&quot;&gt;logs&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=1.5;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="gateway" source="procgroup" target="lokiexp">
+        <mxCell id="ga2" edge="1" parent="gateway" source="procgroup" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=2;fontSize=15;fontColor=#82b366;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" target="lokiexp" value="logs">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <mxCell id="ga3" value="&lt;font style=&quot;font-size:10px;color:#82b366&quot;&gt;traces&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=1.5;exitX=0.75;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="gateway" source="procgroup" target="tempoexp">
+        <mxCell id="ga3" edge="1" parent="gateway" source="procgroup" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=2;fontSize=15;fontColor=#82b366;exitX=0.75;exitY=1;exitDx=0;exitDy=0;" target="tempoexp" value="traces">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- ── Backends ──────────────────────────────────────────── -->
-        <mxCell id="loki" value="&lt;b&gt;LokiStack&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;openshift-logging&lt;br&gt;Log storage &amp; querying&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;shadow=1;arcSize=8;" vertex="1" parent="ocp">
-          <mxGeometry x="640" y="180" width="140" height="80" as="geometry" />
+        <mxCell id="tempo" parent="ocp" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=15;shadow=1;arcSize=8;" value="&lt;b&gt;TempoMonolithic&lt;/b&gt;&lt;br&gt;rhbo-demo (multi-tenant)&lt;br&gt;Trace storage &amp; querying" vertex="1">
+          <mxGeometry height="100" width="176.2962962962963" x="708.0663440860216" y="70" as="geometry" />
         </mxCell>
-
-        <mxCell id="tempo" value="&lt;b&gt;TempoMonolithic&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;rhbo-demo (multi-tenant)&lt;br&gt;Trace storage &amp; querying&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;shadow=1;arcSize=8;" vertex="1" parent="ocp">
-          <mxGeometry x="640" y="310" width="140" height="80" as="geometry" />
+        <mxCell id="coogroup" parent="ocp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f4f7;strokeColor=#4a86c8;fontSize=15;fontStyle=1;verticalAlign=top;align=center;spacingTop=8;arcSize=8;container=1;collapsible=0;strokeWidth=1.5;shadow=1;" value="Cluster Observability Operator" vertex="1">
+          <mxGeometry height="180" width="370.65" x="690" y="555" as="geometry" />
         </mxCell>
-
-        <mxCell id="minio" value="&lt;b&gt;MinIO&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;S3 object storage&lt;br&gt;(demo only)&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;shadow=1;" vertex="1" parent="ocp">
-          <mxGeometry x="830" y="240" width="100" height="70" as="geometry" />
+        <mxCell id="logsui" parent="coogroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#4a86c8;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;Observe → Logs&lt;/b&gt;&lt;br&gt;UIPlugin: Logging&lt;br&gt;Schema: otel / viaq" vertex="1">
+          <mxGeometry height="85" width="160.28108108108108" x="15.026351351351352" y="45" as="geometry" />
         </mxCell>
-
-        <!-- ── COO UI Plugins ────────────────────────────────────── -->
-        <mxCell id="coogroup" value="Cluster Observability Operator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f4f7;strokeColor=#4a86c8;fontSize=12;fontStyle=1;verticalAlign=top;align=center;spacingTop=6;arcSize=8;container=1;collapsible=0;strokeWidth=1.5;shadow=1;" vertex="1" parent="ocp">
-          <mxGeometry x="600" y="460" width="320" height="160" as="geometry" />
+        <mxCell id="tracesui" parent="coogroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#4a86c8;fontSize=15;arcSize=10;shadow=1;" value="&lt;b&gt;Observe → Traces&lt;/b&gt;&lt;br&gt;UIPlugin: DistributedTracing&lt;br&gt;Tenant: rhbo-demo" vertex="1">
+          <mxGeometry height="85" width="160.28108108108108" x="195.34256756756756" y="45" as="geometry" />
         </mxCell>
-
-        <mxCell id="logsui" value="&lt;b&gt;Observe → Logs&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;UIPlugin: Logging&lt;br&gt;Schema: otel / viaq / select&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#4a86c8;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="coogroup">
-          <mxGeometry x="15" y="40" width="135" height="70" as="geometry" />
+        <mxCell id="ba1" edge="1" parent="ocp" source="lokiexp" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" target="loki">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="170.11" y="635" />
+              <mxPoint x="170.11" y="700.05" />
+              <mxPoint x="660" y="700.05" />
+              <mxPoint x="660" y="355" />
+            </Array>
+            <mxPoint x="216.77345319936552" y="780" as="sourcePoint" />
+            <mxPoint x="603.05376344086" y="530" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
-
-        <mxCell id="tracesui" value="&lt;b&gt;Observe → Traces&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#666&quot;&gt;UIPlugin: DistributedTracing&lt;br&gt;Tenant: rhbo-demo&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#4a86c8;fontSize=11;arcSize=10;shadow=1;" vertex="1" parent="coogroup">
-          <mxGeometry x="170" y="40" width="135" height="70" as="geometry" />
+        <mxCell id="ba2" edge="1" parent="ocp" source="tempoexp" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=2;exitX=0.443;exitY=1.019;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitPerimeter=0;" target="tempo">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="441.05" y="635" />
+              <mxPoint x="439.05" y="635" />
+              <mxPoint x="439.05" y="670.05" />
+              <mxPoint x="630" y="670.05" />
+              <mxPoint x="630" y="119.95" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-
-        <!-- Backend arrows -->
-        <mxCell id="ba1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=2;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="ocp" source="lokiexp" target="loki">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="ma1" edge="1" parent="ocp" source="loki" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;strokeWidth=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="974.8148148148148" y="300" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
-
-        <mxCell id="ba2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=2;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="ocp" source="tempoexp" target="tempo">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="ma2" edge="1" parent="ocp" source="tempo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;strokeWidth=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="974.8148148148148" y="340" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
-
-        <!-- MinIO arrows -->
-        <mxCell id="ma1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;strokeWidth=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" parent="ocp" source="loki" target="minio">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="opsbar" parent="ocp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#CC0000;strokeColor=#990000;arcSize=6;container=1;collapsible=0;opacity=90;" value="" vertex="1">
+          <mxGeometry height="55" width="1057.7777777777778" x="31.11111111111111" y="810" as="geometry" />
         </mxCell>
-
-        <mxCell id="ma2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;strokeWidth=1;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" parent="ocp" source="tempo" target="minio">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="opslabel" parent="opsbar" style="text;html=1;align=center;verticalAlign=middle;fontSize=15;" value="&lt;font color=&quot;#ffffff&quot;&gt;&lt;b&gt;Operators:&lt;/b&gt;  RHBO Operator  ·  Loki Operator  ·  Tempo Operator  ·  Cluster Observability Operator&lt;/font&gt;" vertex="1">
+          <mxGeometry height="45" width="1037.0370370370367" x="10.37037037037037" y="5" as="geometry" />
         </mxCell>
-
-        <!-- COO arrows -->
-        <mxCell id="ca1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#4a86c8;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="ocp" source="loki" target="coogroup">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="Moc3FJcpL133R0Ruo1TH-2" edge="1" parent="ocp" source="tempo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#4a86c8;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.735;entryY=-0.005;entryDx=0;entryDy=0;entryPerimeter=0;" target="coogroup" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="796.23" y="239.95" />
+              <mxPoint x="962.4399999999999" y="239.95" />
+            </Array>
+            <mxPoint x="1410.7790322580647" y="280" as="sourcePoint" />
+            <mxPoint x="979.0370967741936" y="510" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
-
-        <mxCell id="ca2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#4a86c8;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="ocp" source="tempo" target="coogroup">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="loki" parent="ocp" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=15;shadow=1;arcSize=8;" value="&lt;b&gt;LokiStack&lt;/b&gt;&lt;br&gt;openshift-logging&lt;br&gt;Log storage &amp; querying" vertex="1">
+          <mxGeometry height="100" width="176.2962962962963" x="708.0663440860214" y="305" as="geometry" />
         </mxCell>
-
-        <!-- ── Operators (bottom bar) ────────────────────────────── -->
-        <mxCell id="opsbar" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#CC0000;strokeColor=#990000;arcSize=6;container=1;collapsible=0;opacity=90;" vertex="1" parent="ocp">
-          <mxGeometry x="30" y="700" width="900" height="50" as="geometry" />
+        <mxCell id="Moc3FJcpL133R0Ruo1TH-65" edge="1" parent="ocp" source="loki" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#4a86c8;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.684;entryY=0.598;entryDx=0;entryDy=0;entryPerimeter=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="871.0293548387098" y="440" as="sourcePoint" />
+            <mxPoint x="796.7300000000004" y="550.1599999999999" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
-
-        <mxCell id="opslabel" value="&lt;font color=&quot;#ffffff&quot;&gt;&lt;b&gt;Operators:&lt;/b&gt;  RHBO Operator  ·  Loki Operator  ·  Tempo Operator  ·  Cluster Observability Operator&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;" vertex="1" parent="opsbar">
-          <mxGeometry x="10" y="5" width="880" height="40" as="geometry" />
-        </mxCell>
-
       </root>
     </mxGraphModel>
   </diagram>
