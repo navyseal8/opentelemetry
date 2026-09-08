@@ -4,7 +4,9 @@ A two-tier demo showcasing **Red Hat Build of OpenTelemetry (RHBO)** collecting 
 
 ## Architecture
 
-> **Editable diagram**: Open [`docs/architecture.drawio`](docs/architecture.drawio) in [draw.io](https://app.diagrams.net/) (or the VS Code draw.io extension) for a polished visual diagram. Export to PNG/SVG as needed.
+![RHBO Architecture](docs/architecture.png)
+
+> **Editable source**: [`docs/architecture.drawio`](docs/architecture.drawio) — open in [draw.io](https://app.diagrams.net/) or the VS Code draw.io extension to modify and re-export.
 
 <details>
 <summary>Text-based diagram (Mermaid — click to expand)</summary>
